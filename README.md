@@ -25,7 +25,7 @@ A hosted copy runs at https://odoluca.github.io/atlas-studio/.
 ## Map panel
 
 - **Style:** Atlas, Soft or Night.
-- **Map:** “Remove hidden roads” deletes roads lying completely underneath a wider road, together with the buildings they generate.
+- **Map:** roads left completely underneath a wider road are removed automatically when you draw roads or blocks (undo restores them); “Remove hidden roads” runs the same clean-up on demand.
 - **View:** a Rotate map slider turns the view (place names and labels stay upright; road and contour labels follow their lines). "North up" aligns the view with the north bearing; "Reset" returns to the drawing's orientation. Exports are never rotated.
 - **Terrain:** sea level, contour lines with interval and elevation labels, hill shading strength, forest trees.
 - **Buildings:** automatic buildings line every road marked "Generate buildings", facing the street, set back from other roads, never on water, parks or forest, never overlapping. Choose a map-wide style (terraced rows, detached houses, mixed, dense downtown) and density. Any road or whole street can override both in the Selection panel, and the Road and Blocks tools can set them for new roads up front. Turning automatic buildings off freezes the current set so you can keep editing without changes.

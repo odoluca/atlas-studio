@@ -1,15 +1,15 @@
 // Atlas Studio editor: view, tools, panels, history, autosave, export.
-import { newDoc, serialize, deserialize, History } from './state.js?v=2.2.1';
-import { MAT } from './terrain.js?v=2.2.1';
-import { ROAD_TYPES, RoadGraph, gridLines } from './roads.js?v=2.2.1';
-import { generateBuildings, BUILDING_STYLES } from './buildings.js?v=2.2.1';
-import { STYLES, PLACE_OPTIONS, LABEL_KINDS } from './styles.js?v=2.2.1';
-import { CanvasPainter, SvgPainter, renderTerrain, renderRoads, renderBuildings, renderRoadLabels, renderPlaces, renderLabels, renderScene, renderCompass, worldToScreen, screenToWorld, viewBounds, roadGeometry } from './render.js?v=2.2.1';
-import { saveAutosave, loadAutosave, download, pickFile, prefs } from './storage.js?v=2.2.1';
-import { makeExample } from './sample.js?v=2.2.1';
-import { toGeoJSON, toOSM, toAsciiGrid } from './exporters.js?v=2.2.1';
-import { APP_VERSION } from './version.js?v=2.2.1';
-import { dist, dist2, closestOnPolyline, uid, simplify, clamp, pointInPolygon, polygonArea } from './geom.js?v=2.2.1';
+import { newDoc, serialize, deserialize, History } from './state.js?v=2.2.2';
+import { MAT } from './terrain.js?v=2.2.2';
+import { ROAD_TYPES, RoadGraph, gridLines } from './roads.js?v=2.2.2';
+import { generateBuildings, BUILDING_STYLES } from './buildings.js?v=2.2.2';
+import { STYLES, PLACE_OPTIONS, LABEL_KINDS } from './styles.js?v=2.2.2';
+import { CanvasPainter, SvgPainter, renderTerrain, renderRoads, renderBuildings, renderRoadLabels, renderPlaces, renderLabels, renderScene, renderCompass, worldToScreen, screenToWorld, viewBounds, roadGeometry } from './render.js?v=2.2.2';
+import { saveAutosave, loadAutosave, download, pickFile, prefs } from './storage.js?v=2.2.2';
+import { makeExample } from './sample.js?v=2.2.2';
+import { toGeoJSON, toOSM, toAsciiGrid } from './exporters.js?v=2.2.2';
+import { APP_VERSION } from './version.js?v=2.2.2';
+import { dist, dist2, closestOnPolyline, uid, simplify, clamp, pointInPolygon, polygonArea } from './geom.js?v=2.2.2';
 
 const $ = (id) => document.getElementById(id);
 
@@ -367,7 +367,7 @@ class App {
       { type: 'section', label: 'Map' },
       { type: 'stats', rows: [['Roads', 'stRoads'], ['Buildings', 'stBuildings'], ['Places', 'stPlaces'], ['Labels', 'stLabels'], ['Terrain tiles', 'stTiles']] },
       { type: 'buttons', buttons: [{ label: 'Fit to map', onClick: () => this.fit() }, { label: 'Remove hidden roads', onClick: () => this.removeHiddenRoads() }] },
-      { type: 'info', html: '“Remove hidden roads” deletes roads that lie completely underneath a wider road, such as a street left under an avenue, together with the buildings they generate.' },
+      { type: 'info', html: 'Roads left completely underneath a wider road (a street under a new avenue) are removed automatically when you draw roads or blocks. “Remove hidden roads” runs the same clean-up on demand, for example after reshaping.' },
     ];
     const obj = { ...s, seaLevel: T.seaLevel, viewRotation: Math.round(((this.view?.rot || 0) * 180) / Math.PI) };
     this.form(el, schema, obj, set);
@@ -938,8 +938,10 @@ class App {
       const sm = points.map((q, i) => (i === 0 || i === points.length - 1) ? q : { x: (points[i - 1].x + 2 * q.x + points[i + 1].x) / 4, y: (points[i - 1].y + 2 * q.y + points[i + 1].y) / 4 });
       points = sm;
     }
-    const created = this.withFeatureHistory('Draw road', () => this.doc.roads.addRoad(points, { type: ts.type, name: ts.name, zoned: ts.zoned && ROAD_TYPES[ts.type].zoned && !ts.tunnel, bstyle: ts.bstyle, bdensity: ts.bdensity, tunnel: ts.tunnel }, { snap: ts.snap ? 12 / this.view.scale + 4 : 0.5 }));
+    let removed = 0;
+    const created = this.withFeatureHistory('Draw road', () => { const c = this.doc.roads.addRoad(points, { type: ts.type, name: ts.name, zoned: ts.zoned && ROAD_TYPES[ts.type].zoned && !ts.tunnel, bstyle: ts.bstyle, bdensity: ts.bdensity, tunnel: ts.tunnel }, { snap: ts.snap ? 12 / this.view.scale + 4 : 0.5 }); removed = this.pruneHiddenRoads(); return c.filter((e) => this.doc.roads.edges.has(e.id)); });
     if (created.length) this.select({ kind: 'road', id: created[0].id });
+    if (removed) this.toast(`Removed ${removed} road${removed > 1 ? 's' : ''} hidden under wider roads`);
     this.renderMapPanel();
   }
 
@@ -1002,9 +1004,10 @@ class App {
     this.draft = null; this.updateHint();
     if (!pv || !pv.lines.length) { this.toast('No blocks fit here (water or parks in the way).'); return; }
     const ts = this.ts.grid;
-    this.withFeatureHistory('Create blocks', () => { for (const ln of pv.lines) this.doc.roads.addRoad(ln, { type: ts.type, zoned: ts.zoned, bstyle: ts.bstyle, bdensity: ts.bdensity }, { snap: Math.min(12, ts.blockW * 0.3) }); });
+    let removed = 0;
+    this.withFeatureHistory('Create blocks', () => { for (const ln of pv.lines) this.doc.roads.addRoad(ln, { type: ts.type, zoned: ts.zoned, bstyle: ts.bstyle, bdensity: ts.bdensity }, { snap: Math.min(12, ts.blockW * 0.3) }); removed = this.pruneHiddenRoads(); });
     this.renderMapPanel();
-    this.toast(`Added ${pv.lines.length} streets`);
+    this.toast(`Added ${pv.lines.length} streets` + (removed ? `, removed ${removed} hidden` : ''));
   }
 
   // ---------- Tools: paint / terrain / eraser ----------
@@ -1118,6 +1121,15 @@ class App {
   }
 
   // ---------- Rendering ----------
+  /** Delete roads lying completely under wider ones (call inside a feature-history callback). Returns the count. */
+  pruneHiddenRoads() {
+    const ids = this.doc.roads.hiddenRoads();
+    if (!ids.length) return 0;
+    const ends = new Set();
+    for (const id of ids) { const e = this.doc.roads.edges.get(id); if (e) { ends.add(e.a); ends.add(e.b); } this.doc.roads.removeEdge(id, false); }
+    for (const n of ends) if (this.doc.roads.nodes.has(n)) this.doc.roads.healNode(n);
+    return ids.length;
+  }
   removeHiddenRoads() {
     const ids = this.doc.roads.hiddenRoads();
     if (!ids.length) { this.toast('No hidden roads found'); return; }
