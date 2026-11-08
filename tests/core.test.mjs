@@ -200,3 +200,14 @@ test('terrain: raiseTo lifts ground below sea level without lowering hills', () 
   assert.ok(!T.isWater(0, 0), 'basin drained');
   assert.ok(T.heightAt(200, 0) > 15, 'hill untouched');
 });
+
+test('roads: hidden streets under an avenue are found', () => {
+  const g = new RoadGraph();
+  g.addRoad([{ x: 0, y: 0 }, { x: 300, y: 0 }], { type: 'street' });
+  g.addRoad([{ x: -50, y: 1 }, { x: 350, y: 1 }], { type: 'avenue' });
+  g.addRoad([{ x: 150, y: -100 }, { x: 150, y: 100 }], { type: 'street' });
+  const hidden = g.hiddenRoads().map((id) => g.edges.get(id));
+  assert.ok(hidden.length >= 1);
+  for (const e of hidden) assert.equal(e.type, 'street');
+  for (const e of hidden) for (const p of g.edgePoints(e)) assert.ok(Math.abs(p.y) < 2, 'only the street under the avenue');
+});

@@ -366,7 +366,8 @@ class App {
       { type: 'info', html: 'Map-wide defaults. Buildings line roads marked “Generate buildings”, facing the street, set back from other roads and never on water, parks or forest. Select a road to give it its own style and density. Turning automatic buildings off freezes the current ones.' },
       { type: 'section', label: 'Map' },
       { type: 'stats', rows: [['Roads', 'stRoads'], ['Buildings', 'stBuildings'], ['Places', 'stPlaces'], ['Labels', 'stLabels'], ['Terrain tiles', 'stTiles']] },
-      { type: 'buttons', buttons: [{ label: 'Fit to map', onClick: () => this.fit() }] },
+      { type: 'buttons', buttons: [{ label: 'Fit to map', onClick: () => this.fit() }, { label: 'Remove hidden roads', onClick: () => this.removeHiddenRoads() }] },
+      { type: 'info', html: '“Remove hidden roads” deletes roads that lie completely underneath a wider road, such as a street left under an avenue, together with the buildings they generate.' },
     ];
     const obj = { ...s, seaLevel: T.seaLevel, viewRotation: Math.round(((this.view?.rot || 0) * 180) / Math.PI) };
     this.form(el, schema, obj, set);
@@ -634,14 +635,22 @@ class App {
     }
     for (const b of [...this.doc.buildings].reverse()) if (pointInPolygon(w.x, w.y, b.pts)) return { kind: 'building', id: b.id };
     const g = this.doc.roads;
-    let best = null;
+    const cands = [];
     for (const e of g.edges.values()) {
       const pts = roadGeometry(g, e);
       const c = closestOnPolyline(w.x, w.y, pts);
       const tol = Math.max(g.width(e) / 2 + 2, 7 / v.scale);
-      if (c && c.d2 < tol * tol && (!best || c.d2 < best.d2)) best = { kind: 'road', id: e.id, d2: c.d2 };
+      if (c && c.d2 < tol * tol) cands.push({ kind: 'road', id: e.id, d2: c.d2 });
     }
-    return best;
+    if (!cands.length) return null;
+    cands.sort((a, b) => a.d2 - b.d2);
+    // Clicking the same spot again cycles through overlapping roads (e.g. a street hidden under an avenue)
+    const sel = this.selection;
+    if (sel?.kind === 'road' && cands.length > 1) {
+      const idx = cands.findIndex((c) => c.id === sel.id);
+      if (idx >= 0) return { ...cands[(idx + 1) % cands.length], others: cands.length - 1 };
+    }
+    return { ...cands[0], others: cands.length - 1 };
   }
   roadHandles(e) {
     const g = this.doc.roads;
@@ -666,7 +675,7 @@ class App {
     }
     const hit = this.hitTest(p.sx, p.sy);
     if (!hit) { this.select(null); return; }
-    if (!sel || sel.id !== hit.id) this.select(hit);
+    if (!sel || sel.id !== hit.id) { this.select(hit); if (hit.others) this.toast(`${hit.others + 1} roads here – click again to select the next one`); }
     if (hit.kind === 'place' || hit.kind === 'label') {
       const f = (hit.kind === 'place' ? this.doc.places : this.doc.labels).find((x) => x.id === hit.id);
       this.draft = { kind: 'dragFeature', f, ox: f.x - p.x, oy: f.y - p.y, startX: f.x, startY: f.y };
@@ -1109,6 +1118,13 @@ class App {
   }
 
   // ---------- Rendering ----------
+  removeHiddenRoads() {
+    const ids = this.doc.roads.hiddenRoads();
+    if (!ids.length) { this.toast('No hidden roads found'); return; }
+    this.withFeatureHistory('Remove hidden roads', () => { for (const id of ids) this.doc.roads.removeEdge(id, false); for (const n of [...this.doc.roads.nodes.keys()]) if (this.doc.roads.nodes.has(n)) this.doc.roads.healNode(n); });
+    this.select(null); this.renderMapPanel();
+    this.toast(`Removed ${ids.length} hidden road${ids.length > 1 ? 's' : ''}`);
+  }
   /** Signature of water channels so the terrain layer re-renders when they change. */
   channelKey() {
     let k = '';

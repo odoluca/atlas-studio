@@ -1,5 +1,5 @@
 // Road network as a planar graph: nodes (junctions/ends) and edges (polylines between nodes).
-import { closestOnSegment, closestOnPolyline, segmentIntersection, dist, dist2, simplify, uid, SpatialHash, bbox, chaikin } from './geom.js?v=2.2.1';
+import { closestOnSegment, closestOnPolyline, segmentIntersection, dist, dist2, simplify, uid, SpatialHash, bbox, chaikin, polylineLength, pointAlong } from './geom.js?v=2.2.1';
 
 export const ROAD_TYPES = {
   path:    { label: 'Path',     width: 3,  rank: 0, zoned: false },
@@ -256,6 +256,35 @@ export class RoadGraph {
     this.healNode(tn.id);
     this.version++;
     return this.nodes.get(tn.id) || null;
+  }
+
+  /** Ids of edges lying entirely within the band of another, wider (or equal) road of the same layer. */
+  hiddenRoads() {
+    const sh = this.segmentHash(60);
+    const out = [];
+    for (const e of this.edges.values()) {
+      if (e.tunnel) continue;
+      const pts = roadGeometry(this, e);
+      const L = polylineLength(pts);
+      const n = Math.max(2, Math.ceil(L / 5) + 1);
+      let hidden = true;
+      for (let k = 0; k < n && hidden; k++) {
+        const q = pointAlong(pts, (L * k) / n);
+        const items = sh.query(q.x - 30, q.y - 30, q.x + 30, q.y + 30);
+        let covered = false;
+        for (const it of items) {
+          const o = it.e;
+          if (o.id === e.id || o.tunnel || this.layerOf(o) !== this.layerOf(e)) continue;
+          if (this.width(o) < this.width(e)) continue;
+          if (this.width(o) === this.width(e) && o.id < e.id) continue; // equal twins: keep the one with the smaller id
+          const half = this.width(o) / 2;
+          if (closestOnSegment(q.x, q.y, it.ax, it.ay, it.bx, it.by).d2 <= half * half) { covered = true; break; }
+        }
+        if (!covered) hidden = false;
+      }
+      if (hidden) out.push(e.id);
+    }
+    return out;
   }
 
   /** Edges touching a node. */
