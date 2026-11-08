@@ -8,6 +8,7 @@ import { CanvasPainter, SvgPainter, renderTerrain, renderRoads, renderBuildings,
 import { saveAutosave, loadAutosave, download, pickFile, prefs } from './storage.js';
 import { makeExample } from './sample.js';
 import { toGeoJSON, toOSM, toAsciiGrid } from './exporters.js';
+import { APP_VERSION } from './version.js';
 import { dist, dist2, closestOnPolyline, uid, simplify, clamp, pointInPolygon, polygonArea } from './geom.js';
 
 const $ = (id) => document.getElementById(id);
@@ -72,7 +73,24 @@ class App {
   }
 
   // ---------- Document lifecycle ----------
+  /** Compare the running build with version.json on the server; offer a reload when they differ. */
+  async checkForUpdate() {
+    try {
+      const res = await fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const { version } = await res.json();
+      if (version && version !== APP_VERSION) {
+        const t = $('toast');
+        t.innerHTML = `A newer version of Atlas Studio is available (${version}). <button class="btn" style="margin-left:8px">Reload</button>`;
+        t.querySelector('button').onclick = () => { this.doc.view = { cx: this.view.cx, cy: this.view.cy, scale: this.view.scale, rot: this.view.rot || 0 }; saveAutosave(serialize(this.doc)).catch(() => {}).finally(() => location.reload()); };
+        t.hidden = false;
+        clearTimeout(this._toastT);
+      }
+    } catch { /* offline or file:// — ignore */ }
+  }
   async boot() {
+    this.checkForUpdate();
+    setInterval(() => this.checkForUpdate(), 10 * 60 * 1000);
     try {
       const saved = await loadAutosave();
       if (saved) { this.loadDoc(deserialize(saved), false); this.status('Restored from this browser'); return; }

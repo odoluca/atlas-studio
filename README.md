@@ -57,6 +57,10 @@ A hosted copy runs at https://odoluca.github.io/atlas-studio/.
 - `src/sample.js` – the procedurally built example map.
 - `src/main.js` – the editor: view, tools, panels, export.
 
+## Releasing
+
+Bump the version in `src/version.js`, `version.json` and `package.json` together (a test checks they match) before pushing a user-visible change. The app compares its version with `version.json` on the server and offers a reload when a newer build is live, which avoids stale cached scripts on GitHub Pages.
+
 ## Development
 
 `npm test` runs the Node unit tests (`tests/*.test.mjs`, Node 18+). `npm run check` syntax-checks the sources. No `npm install` is required.
