@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atlas Studio</title>
+<meta name="description" content="Design fictional street maps with terrain, contour lines, roads, blocks, and buildings. Runs entirely in your browser.">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-select" viewBox="0 0 24 24"><path d="M5 3l14 8-6 2-3 7z"/></symbol>
+    <symbol id="i-pan" viewBox="0 0 24 24"><path d="M8 13V6a1.5 1.5 0 013 0v5V4a1.5 1.5 0 013 0v7V5a1.5 1.5 0 013 0v9.5a5.5 5.5 0 01-11 0V11a1.5 1.5 0 013 0z"/></symbol>
+    <symbol id="i-road" viewBox="0 0 24 24"><path d="M4 20L9 4M20 20L15 4M12 4v3M12 10v4M12 17v3"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><path d="M4 4h16v16H4zM4 10h16M4 15h16M10 4v16M15 4v16"/></symbol>
+    <symbol id="i-paint" viewBox="0 0 24 24"><path d="M4 20c2-6 6-6 8-8l4 4c-2 2-2 6-8 8zM12 12l6-8 2 2-8 6"/></symbol>
+    <symbol id="i-terrain" viewBox="0 0 24 24"><path d="M3 19l6-10 4 6 2-3 6 7zM3 15l5-7M16 9l5 6"/></symbol>
+    <symbol id="i-place" viewBox="0 0 24 24"><path d="M12 21s-6-6-6-11a6 6 0 0112 0c0 5-6 11-6 11zM12 12a2 2 0 100-4 2 2 0 000 4z"/></symbol>
+    <symbol id="i-label" viewBox="0 0 24 24"><path d="M5 6h14M12 6v13M9 19h6"/></symbol>
+    <symbol id="i-building" viewBox="0 0 24 24"><path d="M4 20V8l6-3v15M10 20V11l6-2v11M16 20V13l4-1v8M4 20h16M7 10v1M7 13v1M7 16v1M13 13v1M13 16v1"/></symbol>
+    <symbol id="i-eraser" viewBox="0 0 24 24"><path d="M4 16l9-9 6 6-6 6H8zM10 20h10"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5M4 9h9a6 6 0 010 12h-4"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 24 24"><path d="M15 14l5-5-5-5M20 9h-9a6 6 0 000 12h4"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-fit" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+  </defs>
+</svg>
+
+<header class="topbar">
+  <div class="brand"><img src="assets/icon.svg" alt="" width="28" height="28"><span>atlas <em>studio</em></span></div>
+  <input id="mapName" class="map-name" type="text" value="Untitled map" aria-label="Map name" spellcheck="false">
+  <div class="topbar-group">
+    <button id="btnNew" class="btn">New</button>
+    <button id="btnExample" class="btn">Example</button>
+    <button id="btnOpen" class="btn">Open…</button>
+    <button id="btnSave" class="btn">Save</button>
+  </div>
+  <div class="topbar-group">
+    <button id="btnUndo" class="btn icon" title="Undo (Ctrl+Z)"><svg><use href="#i-undo"/></svg></button>
+    <button id="btnRedo" class="btn icon" title="Redo (Ctrl+Y)"><svg><use href="#i-redo"/></svg></button>
+  </div>
+  <div class="topbar-group">
+    <div class="menu-wrap">
+      <button id="btnExport" class="btn primary" aria-haspopup="true" aria-expanded="false">Export ▾</button>
+      <div id="exportMenu" class="menu" hidden>
+        <button id="btnProject">Project file (.atlas.json) <small>Atlas Studio format, fully editable</small></button>
+        <button id="btnPng">PNG image <small>raster, up to 3600 px</small></button>
+        <button id="btnSvg">SVG drawing <small>vector, Inkscape / Illustrator</small></button>
+        <button id="btnGeoJson">GeoJSON <small>QGIS, Mapbox, Leaflet, Felt</small></button>
+        <button id="btnOsm">OSM XML <small>JOSM, Maperitive, Mapnik</small></button>
+        <button id="btnAsc">Terrain grid (.asc) <small>heightfield for QGIS</small></button>
+      </div>
+    </div>
+  </div>
+  <span id="saveStatus" class="save-status" aria-live="polite">Ready</span>
+</header>
+
+<div class="workspace">
+  <nav class="toolbar" id="toolbar" aria-label="Tools"></nav>
+  <aside class="tool-settings" id="toolSettings"></aside>
+  <main class="canvas-wrap">
+    <canvas id="map" tabindex="0" aria-label="Map canvas"></canvas>
+    <div class="hud hud-zoom">
+      <button id="zoomIn" class="hud-btn" title="Zoom in (+)"><svg><use href="#i-plus"/></svg></button>
+      <span id="zoomLabel">100%</span>
+      <button id="zoomOut" class="hud-btn" title="Zoom out (−)"><svg><use href="#i-minus"/></svg></button>
+      <button id="zoomFit" class="hud-btn" title="Fit map (F)"><svg><use href="#i-fit"/></svg></button>
+    </div>
+    <div class="hud hud-scale"><div id="scaleBar"></div><span id="scaleText">100 m</span></div>
+    <div class="hud hud-hint" id="hint"></div>
+  </main>
+  <aside class="panel" id="panel">
+    <div class="panel-tabs"><button class="tab active" data-tab="map">Map</button><button class="tab" data-tab="selection">Selection</button></div>
+    <section id="tabMap" class="tab-body"></section>
+    <section id="tabSelection" class="tab-body" hidden></section>
+  </aside>
+</div>
+
+<footer class="statusbar">
+  <span id="statusTool"></span>
+  <span id="statusCoords"></span>
+  <span id="statusInfo"></span>
+</footer>
+
+<div id="toast" class="toast" hidden></div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

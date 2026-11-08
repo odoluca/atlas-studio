@@ -1,0 +1,13 @@
+{
+  "name": "atlas-studio",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A dependency-free fictional map designer with terrain, contours, roads, blocks and buildings.",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check": "node --check src/geom.js && node --check src/terrain.js && node --check src/roads.js && node --check src/buildings.js && node --check src/render.js && node --check src/state.js && node --check src/storage.js && node --check src/sample.js && node --check src/main.js && node --check src/exporters.js",
+    "preview": "python scripts/serve.py 8080",
+    "package": "python scripts/package.py"
+  }
+}
