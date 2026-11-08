@@ -1,5 +1,5 @@
 // Tiled infinite heightfield + material field, brushes, and marching squares.
-import { smoothstep, chaikin } from './geom.js?v=2.2.0';
+import { smoothstep, chaikin } from './geom.js?v=2.2.1';
 
 export const TILE = 64;          // cells per tile side
 export const CELL = 4;           // meters per cell
@@ -123,6 +123,10 @@ export class Terrain {
     } else if (mode === 'flatten') {
       const k = Math.min(1, amount * 0.3);
       this.forEachCell(x, y, r, hardness, (t, i, f) => { t.h[i] += (target - t.h[i]) * f * k; });
+    } else if (mode === 'raiseTo') {
+      // Lift cells below `target` towards it (never lowers anything); amount 1 = all the way in the brush core
+      const k = Math.min(1, amount);
+      this.forEachCell(x, y, r, hardness, (t, i, f) => { if (t.h[i] < target) t.h[i] += (target - t.h[i]) * f * k; });
     } else {
       const sign = mode === 'lower' ? -1 : 1;
       this.forEachCell(x, y, r, hardness, (t, i, f) => { t.h[i] += sign * amount * f; });

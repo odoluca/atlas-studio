@@ -1,7 +1,7 @@
 // Georeferenced exports: GeoJSON, OpenStreetMap XML, and an ESRI ASCII grid of the terrain.
-import { CELL, MAT, maskOutlines, isolines, cellRanges, TILE, TILE_M } from './terrain.js?v=2.2.0';
-import { roadGeometry } from './roads.js?v=2.2.0';
-import { chaikin, pointInPolygon, polygonArea } from './geom.js?v=2.2.0';
+import { CELL, MAT, maskOutlines, isolines, cellRanges, TILE, TILE_M } from './terrain.js?v=2.2.1';
+import { roadGeometry } from './roads.js?v=2.2.1';
+import { chaikin, pointInPolygon, polygonArea } from './geom.js?v=2.2.1';
 
 const M_PER_DEG = 111320;
 

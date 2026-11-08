@@ -1,5 +1,5 @@
 // Road network as a planar graph: nodes (junctions/ends) and edges (polylines between nodes).
-import { closestOnSegment, closestOnPolyline, segmentIntersection, dist, dist2, simplify, uid, SpatialHash, bbox, chaikin } from './geom.js?v=2.2.0';
+import { closestOnSegment, closestOnPolyline, segmentIntersection, dist, dist2, simplify, uid, SpatialHash, bbox, chaikin } from './geom.js?v=2.2.1';
 
 export const ROAD_TYPES = {
   path:    { label: 'Path',     width: 3,  rank: 0, zoned: false },

@@ -189,3 +189,14 @@ test('roads: dragging an end onto another road connects them', () => {
   assert.equal(h.edges.size, 1, 'fused');
   assert.equal([...h.edges.values()][0].name, 'Elm');
 });
+
+test('terrain: raiseTo lifts ground below sea level without lowering hills', () => {
+  const T = new Terrain();
+  T.applyHeight(0, 0, 60, 0.5, 5, 'lower');   // a basin below sea level
+  T.applyHeight(200, 0, 60, 0.5, 20, 'raise'); // a hill
+  assert.ok(T.isWater(0, 0));
+  T.applyHeight(0, 0, 80, 0.7, 1, 'raiseTo', T.seaLevel + 0.5);
+  T.applyHeight(200, 0, 80, 0.7, 1, 'raiseTo', T.seaLevel + 0.5);
+  assert.ok(!T.isWater(0, 0), 'basin drained');
+  assert.ok(T.heightAt(200, 0) > 15, 'hill untouched');
+});

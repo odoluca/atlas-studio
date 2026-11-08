@@ -1,9 +1,9 @@
 // Scene renderer with Canvas and SVG painters. All geometry passed to painters is in world meters.
-import { CELL, MAT, maskOutlines, isolines, cellRanges, hillshade } from './terrain.js?v=2.2.0';
-import { ROAD_TYPES, roadGeometry } from './roads.js?v=2.2.0';
+import { CELL, MAT, maskOutlines, isolines, cellRanges, hillshade } from './terrain.js?v=2.2.1';
+import { ROAD_TYPES, roadGeometry } from './roads.js?v=2.2.1';
 export { roadGeometry };
-import { STYLES, PLACE_CATEGORIES, LABEL_KINDS } from './styles.js?v=2.2.0';
-import { chaikin, polylineLength, pointAlong, hash2 } from './geom.js?v=2.2.0';
+import { STYLES, PLACE_CATEGORIES, LABEL_KINDS } from './styles.js?v=2.2.1';
+import { chaikin, polylineLength, pointAlong, hash2 } from './geom.js?v=2.2.1';
 
 export const FONT = "'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif";
 

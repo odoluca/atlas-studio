@@ -1,15 +1,15 @@
 // Atlas Studio editor: view, tools, panels, history, autosave, export.
-import { newDoc, serialize, deserialize, History } from './state.js?v=2.2.0';
-import { MAT } from './terrain.js?v=2.2.0';
-import { ROAD_TYPES, RoadGraph, gridLines } from './roads.js?v=2.2.0';
-import { generateBuildings, BUILDING_STYLES } from './buildings.js?v=2.2.0';
-import { STYLES, PLACE_OPTIONS, LABEL_KINDS } from './styles.js?v=2.2.0';
-import { CanvasPainter, SvgPainter, renderTerrain, renderRoads, renderBuildings, renderRoadLabels, renderPlaces, renderLabels, renderScene, renderCompass, worldToScreen, screenToWorld, viewBounds, roadGeometry } from './render.js?v=2.2.0';
-import { saveAutosave, loadAutosave, download, pickFile, prefs } from './storage.js?v=2.2.0';
-import { makeExample } from './sample.js?v=2.2.0';
-import { toGeoJSON, toOSM, toAsciiGrid } from './exporters.js?v=2.2.0';
-import { APP_VERSION } from './version.js?v=2.2.0';
-import { dist, dist2, closestOnPolyline, uid, simplify, clamp, pointInPolygon, polygonArea } from './geom.js?v=2.2.0';
+import { newDoc, serialize, deserialize, History } from './state.js?v=2.2.1';
+import { MAT } from './terrain.js?v=2.2.1';
+import { ROAD_TYPES, RoadGraph, gridLines } from './roads.js?v=2.2.1';
+import { generateBuildings, BUILDING_STYLES } from './buildings.js?v=2.2.1';
+import { STYLES, PLACE_OPTIONS, LABEL_KINDS } from './styles.js?v=2.2.1';
+import { CanvasPainter, SvgPainter, renderTerrain, renderRoads, renderBuildings, renderRoadLabels, renderPlaces, renderLabels, renderScene, renderCompass, worldToScreen, screenToWorld, viewBounds, roadGeometry } from './render.js?v=2.2.1';
+import { saveAutosave, loadAutosave, download, pickFile, prefs } from './storage.js?v=2.2.1';
+import { makeExample } from './sample.js?v=2.2.1';
+import { toGeoJSON, toOSM, toAsciiGrid } from './exporters.js?v=2.2.1';
+import { APP_VERSION } from './version.js?v=2.2.1';
+import { dist, dist2, closestOnPolyline, uid, simplify, clamp, pointInPolygon, polygonArea } from './geom.js?v=2.2.1';
 
 const $ = (id) => document.getElementById(id);
 
@@ -292,7 +292,7 @@ class App {
       case 'paint': schema.push(
         { type: 'swatches', key: 'material', label: 'Material', options: [[MAT.PARK, 'Park', '#cfe6c3'], [MAT.FOREST, 'Forest', '#b7d6a6'], [MAT.SAND, 'Sand', '#f3e7c4'], [MAT.WATER, 'Water', '#a9d0ea'], [MAT.PAVED, 'Paved', '#e2e0da'], [MAT.FARMLAND, 'Farmland', '#eef0d4'], [MAT.LAND, 'Land', '#f1efe9']] },
         { type: 'range', key: 'radius', label: 'Brush size', min: 5, max: 400, step: 1, unit: ' m' },
-        { type: 'info', html: 'Edges are fitted with smooth curves. Buildings never appear on water, parks or forest. Paint <b>Land</b> to erase.' }); break;
+        { type: 'info', html: 'Edges are fitted with smooth curves. Buildings never appear on water, parks or forest. Paint <b>Land</b> to erase, including sea and lakes that lie below sea level (the ground is lifted just above it).' }); break;
       case 'terrain': schema.push(
         { type: 'seg', key: 'mode', label: 'Mode', options: [['raise', 'Raise'], ['lower', 'Lower'], ['smooth', 'Smooth'], ['flatten', 'Flatten']] },
         { type: 'range', key: 'radius', label: 'Brush size', min: 10, max: 800, step: 5, unit: ' m' },
@@ -1008,14 +1008,20 @@ class App {
     const ts = this.ts.paint, p = this.pointer;
     this.beginTerrainStroke('Paint');
     this.draft = { kind: 'stroke', last: { x: p.x, y: p.y } };
-    this.touchTiles(p.x, p.y, ts.radius);
-    this.doc.terrain.applyMaterial(p.x, p.y, ts.radius, ts.material);
+    this.paintAt(p.x, p.y);
     this.invalidateTerrain(true);
+  }
+  /** Apply the paint brush at a point. Land also lifts ground below sea level so it removes any water. */
+  paintAt(x, y) {
+    const ts = this.ts.paint, T = this.doc.terrain;
+    this.touchTiles(x, y, ts.radius);
+    T.applyMaterial(x, y, ts.radius, ts.material);
+    if (ts.material === MAT.LAND) T.applyHeight(x, y, ts.radius, 0.7, 1, 'raiseTo', T.seaLevel + 0.5);
   }
   move_paint() {
     const ts = this.ts.paint, p = this.pointer, d = this.draft;
     if (!p.down || d?.kind !== 'stroke') return;
-    this.strokeAlong(d.last, p, Math.max(2, ts.radius * 0.3), (x, y) => { this.touchTiles(x, y, ts.radius); this.doc.terrain.applyMaterial(x, y, ts.radius, ts.material); });
+    this.strokeAlong(d.last, p, Math.max(2, ts.radius * 0.3), (x, y) => this.paintAt(x, y));
     d.last = { x: p.x, y: p.y };
     this.invalidateTerrain(true);
   }

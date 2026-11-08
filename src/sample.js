@@ -1,8 +1,8 @@
 // Builds the "Westhaven" example map procedurally so there is no large data file to ship.
-import { newDoc } from './state.js?v=2.2.0';
-import { MAT } from './terrain.js?v=2.2.0';
-import { gridLines } from './roads.js?v=2.2.0';
-import { mulberry32 } from './geom.js?v=2.2.0';
+import { newDoc } from './state.js?v=2.2.1';
+import { MAT } from './terrain.js?v=2.2.1';
+import { gridLines } from './roads.js?v=2.2.1';
+import { mulberry32 } from './geom.js?v=2.2.1';
 
 export function makeExample() {
   const doc = newDoc('Westhaven Bay');
