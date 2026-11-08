@@ -1016,7 +1016,8 @@ class App {
     const ts = this.ts.paint, T = this.doc.terrain;
     this.touchTiles(x, y, ts.radius);
     T.applyMaterial(x, y, ts.radius, ts.material);
-    if (ts.material === MAT.LAND) T.applyHeight(x, y, ts.radius, 0.7, 1, 'raiseTo', T.seaLevel + 0.5);
+    // Drain fully inside the brush and feather the new shore out to 1.6× the radius for a gentle slope
+    if (ts.material === MAT.LAND) T.applyHeight(x, y, ts.radius * 1.6, 1 / 1.6, Math.max(6, ts.radius * 0.12), 'raiseTo', T.seaLevel + 0.5);
   }
   move_paint() {
     const ts = this.ts.paint, p = this.pointer, d = this.draft;

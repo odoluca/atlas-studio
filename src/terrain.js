@@ -124,9 +124,9 @@ export class Terrain {
       const k = Math.min(1, amount * 0.3);
       this.forEachCell(x, y, r, hardness, (t, i, f) => { t.h[i] += (target - t.h[i]) * f * k; });
     } else if (mode === 'raiseTo') {
-      // Lift cells below `target` towards it (never lowers anything); amount 1 = all the way in the brush core
-      const k = Math.min(1, amount);
-      this.forEachCell(x, y, r, hardness, (t, i, f) => { if (t.h[i] < target) t.h[i] += (target - t.h[i]) * f * k; });
+      // Lift cells to a profile: `target` inside the brush core, sloping down by `amount` metres at the brush edge.
+      // Idempotent, so overlapping strokes never compound; never lowers anything.
+      this.forEachCell(x, y, r, hardness, (t, i, f) => { const want = target - (1 - f) * amount; if (t.h[i] < want) t.h[i] = want; });
     } else {
       const sign = mode === 'lower' ? -1 : 1;
       this.forEachCell(x, y, r, hardness, (t, i, f) => { t.h[i] += sign * amount * f; });
