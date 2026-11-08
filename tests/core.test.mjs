@@ -154,3 +154,16 @@ test('automatic lots avoid concave hand-drawn buildings exactly', async () => {
   assert.ok(polygonsIntersect([{ x: 110, y: -50 }, { x: 120, y: -50 }, { x: 120, y: -45 }, { x: 110, y: -45 }], U), 'sanity: inside arm');
   assert.ok(!polygonsIntersect([{ x: 140, y: -20 }, { x: 160, y: -20 }, { x: 160, y: -12 }, { x: 140, y: -12 }], U), 'sanity: in the opening');
 });
+
+test('water channels: roads cross without junctions, channels join each other', () => {
+  const g = new RoadGraph();
+  g.addRoad([{ x: 0, y: 50 }, { x: 300, y: 50 }], { type: 'river', name: 'Mill Brook' });
+  g.addRoad([{ x: 150, y: -100 }, { x: 150, y: 200 }], { type: 'street' });
+  assert.equal(g.edges.size, 2, 'street passes over the channel as a bridge');
+  assert.equal(g.nodes.size, 4);
+  // a tributary joins the channel
+  g.addRoad([{ x: 100, y: 200 }, { x: 100, y: 52 }], { type: 'river' });
+  assert.equal(g.nodes.size, 6);
+  assert.equal([...g.edges.values()].filter((e) => e.type === 'river').length, 3, 'channel split at the confluence');
+  assert.ok(g.inChannel(50, 50)); assert.ok(!g.inChannel(50, 90));
+});

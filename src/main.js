@@ -1,15 +1,15 @@
 // Atlas Studio editor: view, tools, panels, history, autosave, export.
-import { newDoc, serialize, deserialize, History } from './state.js?v=2.1.0';
-import { MAT } from './terrain.js?v=2.1.0';
-import { ROAD_TYPES, RoadGraph, gridLines } from './roads.js?v=2.1.0';
-import { generateBuildings, BUILDING_STYLES } from './buildings.js?v=2.1.0';
-import { STYLES, PLACE_OPTIONS, LABEL_KINDS } from './styles.js?v=2.1.0';
-import { CanvasPainter, SvgPainter, renderTerrain, renderRoads, renderBuildings, renderRoadLabels, renderPlaces, renderLabels, renderScene, renderCompass, worldToScreen, screenToWorld, viewBounds, roadGeometry } from './render.js?v=2.1.0';
-import { saveAutosave, loadAutosave, download, pickFile, prefs } from './storage.js?v=2.1.0';
-import { makeExample } from './sample.js?v=2.1.0';
-import { toGeoJSON, toOSM, toAsciiGrid } from './exporters.js?v=2.1.0';
-import { APP_VERSION } from './version.js?v=2.1.0';
-import { dist, dist2, closestOnPolyline, uid, simplify, clamp, pointInPolygon, polygonArea } from './geom.js?v=2.1.0';
+import { newDoc, serialize, deserialize, History } from './state.js?v=2.2.0';
+import { MAT } from './terrain.js?v=2.2.0';
+import { ROAD_TYPES, RoadGraph, gridLines } from './roads.js?v=2.2.0';
+import { generateBuildings, BUILDING_STYLES } from './buildings.js?v=2.2.0';
+import { STYLES, PLACE_OPTIONS, LABEL_KINDS } from './styles.js?v=2.2.0';
+import { CanvasPainter, SvgPainter, renderTerrain, renderRoads, renderBuildings, renderRoadLabels, renderPlaces, renderLabels, renderScene, renderCompass, worldToScreen, screenToWorld, viewBounds, roadGeometry } from './render.js?v=2.2.0';
+import { saveAutosave, loadAutosave, download, pickFile, prefs } from './storage.js?v=2.2.0';
+import { makeExample } from './sample.js?v=2.2.0';
+import { toGeoJSON, toOSM, toAsciiGrid } from './exporters.js?v=2.2.0';
+import { APP_VERSION } from './version.js?v=2.2.0';
+import { dist, dist2, closestOnPolyline, uid, simplify, clamp, pointInPolygon, polygonArea } from './geom.js?v=2.2.0';
 
 const $ = (id) => document.getElementById(id);
 
@@ -281,7 +281,7 @@ class App {
       case 'grid': schema.push(
         { type: 'range', key: 'blockW', label: 'Block width', min: 30, max: 300, step: 5, unit: ' m' },
         { type: 'range', key: 'blockD', label: 'Block depth', min: 30, max: 300, step: 5, unit: ' m' },
-        { type: 'seg', key: 'type', label: 'Road type', options: roadTypes.filter(([k]) => k !== 'rail' && k !== 'highway') },
+        { type: 'seg', key: 'type', label: 'Road type', options: roadTypes.filter(([k]) => k !== 'rail' && k !== 'highway' && k !== 'river') },
         { type: 'check', key: 'zoned', label: 'Generate buildings' },
         { type: 'select', key: 'bstyle', label: 'Building style', options: [['', 'Map default'], ...Object.entries(BUILDING_STYLES).map(([k, v]) => [k, v.label])] },
         { type: 'range', key: 'bdensity', label: 'Building density', min: 0, max: 1.6, step: 0.05, pct: true, zeroLabel: 'map default' },
@@ -871,7 +871,7 @@ class App {
   snapPoint(x, y) {
     const ts = this.ts.road;
     if (!ts.snap) return { x, y };
-    const near = this.doc.roads.nearest(x, y, 12 / this.view.scale + 4);
+    const near = this.doc.roads.nearest(x, y, 12 / this.view.scale + 4, null, ROAD_TYPES[ts.type]?.water ? 'water' : 'road');
     return near ? { x: near.x, y: near.y, snapped: true } : { x, y };
   }
   down_road() {
@@ -965,7 +965,7 @@ class App {
   gridPreviewLines(shift) {
     const g = this.gridGeometry(shift); if (!g) return null;
     const ts = this.ts.grid, T = this.doc.terrain;
-    const blocked = (x, y) => (ts.avoidWater && T.isWater(x, y)) || (ts.avoidParks && [MAT.PARK, MAT.FOREST].includes(T.materialAt(x, y)));
+    const blocked = (x, y) => (ts.avoidWater && (T.isWater(x, y) || this.doc.roads.inChannel(x, y))) || (ts.avoidParks && [MAT.PARK, MAT.FOREST].includes(T.materialAt(x, y)));
     return { g, lines: gridLines(g.O, g.u, g.v, g.L, g.D, ts.blockW, ts.blockD, blocked) };
   }
   move_grid(e) { if (this.draft) this.draft.shift = e.shiftKey; }

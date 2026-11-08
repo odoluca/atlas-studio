@@ -1,9 +1,9 @@
 // Scene renderer with Canvas and SVG painters. All geometry passed to painters is in world meters.
-import { CELL, MAT, maskOutlines, isolines, cellRanges, hillshade } from './terrain.js?v=2.1.0';
-import { ROAD_TYPES, roadGeometry } from './roads.js?v=2.1.0';
+import { CELL, MAT, maskOutlines, isolines, cellRanges, hillshade } from './terrain.js?v=2.2.0';
+import { ROAD_TYPES, roadGeometry } from './roads.js?v=2.2.0';
 export { roadGeometry };
-import { STYLES, PLACE_CATEGORIES, LABEL_KINDS } from './styles.js?v=2.1.0';
-import { chaikin, polylineLength, pointAlong, hash2 } from './geom.js?v=2.1.0';
+import { STYLES, PLACE_CATEGORIES, LABEL_KINDS } from './styles.js?v=2.2.0';
+import { chaikin, polylineLength, pointAlong, hash2 } from './geom.js?v=2.2.0';
 
 export const FONT = "'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif";
 
@@ -440,7 +440,8 @@ export function renderRoadLabels(painter, doc, scale, bounds) {
     done.add(key);
     let ang = Math.atan2(p.ty, p.tx);
     if (ang > Math.PI / 2) ang -= Math.PI; if (ang < -Math.PI / 2) ang += Math.PI;
-    painter.text(e.name, p.x, p.y, { size, color: S.roadLabel, halo: S.roadLabelHalo, angle: ang, worldAngle: true, weight: 500 });
+    const water = ROAD_TYPES[e.type]?.water;
+    painter.text(e.name, p.x, p.y, { size, color: water ? S.labelColors.water : S.roadLabel, halo: water ? S.labelColors.halo : S.roadLabelHalo, angle: ang, worldAngle: true, weight: 500, italic: !!water });
   }
 }
 

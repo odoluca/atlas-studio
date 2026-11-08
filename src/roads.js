@@ -1,5 +1,5 @@
 // Road network as a planar graph: nodes (junctions/ends) and edges (polylines between nodes).
-import { closestOnSegment, closestOnPolyline, segmentIntersection, dist, dist2, simplify, uid, SpatialHash, bbox, chaikin } from './geom.js?v=2.1.0';
+import { closestOnSegment, closestOnPolyline, segmentIntersection, dist, dist2, simplify, uid, SpatialHash, bbox, chaikin } from './geom.js?v=2.2.0';
 
 export const ROAD_TYPES = {
   path:    { label: 'Path',     width: 3,  rank: 0, zoned: false },
@@ -7,6 +7,7 @@ export const ROAD_TYPES = {
   avenue:  { label: 'Avenue',   width: 14, rank: 2, zoned: true },
   highway: { label: 'Highway',  width: 22, rank: 3, zoned: false },
   rail:    { label: 'Railway',  width: 4,  rank: 1, zoned: false },
+  river:   { label: 'Water channel', width: 12, rank: -2, zoned: false, water: true },
 };
 
 /** Rendered geometry of an edge: intermediate points are smoothed into curves. */
@@ -17,6 +18,8 @@ export function roadGeometry(graph, e) {
 
 /** Copy of an edge's editable properties (everything except geometry). */
 export function edgeProps(e) { return { type: e.type, name: e.name, zoned: e.zoned, width: e.width, bridge: e.bridge, tunnel: !!e.tunnel, bstyle: e.bstyle || '', bdensity: e.bdensity || 0 }; }
+
+export const isWaterType = (type) => !!ROAD_TYPES[type]?.water;
 
 export class RoadGraph {
   constructor() { this.nodes = new Map(); this.edges = new Map(); this.version = 0; }
@@ -33,16 +36,21 @@ export class RoadGraph {
   }
 
   /** Find nearest node or edge within maxDist. */
-  nearest(x, y, maxDist, excludeEdge = null) {
+  /** Layer of an edge: 'water' for channels, 'road' otherwise. */
+  layerOf(e) { return isWaterType(e.type) ? 'water' : 'road'; }
+  nodeLayer(nid) { const es = this.edgesAt(nid); return es.length && es.every((e) => isWaterType(e.type)) ? 'water' : 'road'; }
+
+  nearest(x, y, maxDist, excludeEdge = null, layer = null) {
     let best = null;
     const md2 = maxDist * maxDist;
     for (const n of this.nodes.values()) {
       const d2 = dist2(x, y, n.x, n.y);
-      if (d2 <= md2 && (!best || d2 < best.d2)) best = { kind: 'node', id: n.id, x: n.x, y: n.y, d2 };
+      if (d2 <= md2 && (!best || d2 < best.d2) && (!layer || this.nodeLayer(n.id) === layer)) best = { kind: 'node', id: n.id, x: n.x, y: n.y, d2 };
     }
     if (best) return best; // nodes win when within range
     for (const e of this.edges.values()) {
       if (e.id === excludeEdge) continue;
+      if (layer && this.layerOf(e) !== layer) continue;
       const pts = this.edgePoints(e);
       for (let i = 0; i < pts.length - 1; i++) {
         const c = closestOnSegment(x, y, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y);
@@ -77,8 +85,8 @@ export class RoadGraph {
   }
 
   /** Resolve a point to a node (snapping/splitting as needed). */
-  _attach(x, y, snapDist) {
-    const near = this.nearest(x, y, snapDist);
+  _attach(x, y, snapDist, layer = null) {
+    const near = this.nearest(x, y, snapDist, null, layer);
     if (!near) return this.addNode(x, y);
     if (near.kind === 'node') return this.nodes.get(near.id);
     return this.splitEdge(near.id, near.seg, near.x, near.y);
@@ -96,12 +104,13 @@ export class RoadGraph {
     pts = pts.filter((p, i) => i === 0 || dist(p.x, p.y, pts[i - 1].x, pts[i - 1].y) > 0.5);
     if (pts.length < 2) return [];
 
-    const start = this._attach(pts[0].x, pts[0].y, snap);
+    const layer = isWaterType(props.type) ? 'water' : 'road';
+    const start = this._attach(pts[0].x, pts[0].y, snap, layer);
     pts[0] = { x: start.x, y: start.y };
     const endNear = this.nearest(pts[pts.length - 1].x, pts[pts.length - 1].y, snap);
     let end;
     if (endNear && endNear.kind === 'node' && endNear.id === start.id && pts.length < 3) return [];
-    end = this._attach(pts[pts.length - 1].x, pts[pts.length - 1].y, snap);
+    end = this._attach(pts[pts.length - 1].x, pts[pts.length - 1].y, snap, layer);
     pts[pts.length - 1] = { x: end.x, y: end.y };
 
     // Existing nodes lying on the new road become junctions.
@@ -110,12 +119,14 @@ export class RoadGraph {
     const snap2 = snap * snap;
     for (const n of this.nodes.values()) {
       if (n.id === start.id || n.id === end.id) continue;
+      if (this.nodeLayer(n.id) !== layer) continue;
       if (n.x < nb.minX - snap || n.x > nb.maxX + snap || n.y < nb.minY - snap || n.y > nb.maxY + snap) continue;
       const c = closestOnPolyline(n.x, n.y, pts);
       if (c && c.d2 <= snap2) crossings.push({ seg: c.seg, t: c.t, x: n.x, y: n.y, node: n });
     }
     // Find crossings with existing edges
     for (const e of this.edges.values()) {
+      if (this.layerOf(e) !== layer) continue; // roads cross water channels without junctions (bridges)
       const ep = this.edgePoints(e);
       const eb = bbox(ep);
       if (eb.maxX < nb.minX || eb.minX > nb.maxX || eb.maxY < nb.minY || eb.minY > nb.maxY) continue;
@@ -188,9 +199,20 @@ export class RoadGraph {
     let best = null;
     for (const n of this.nodes.values()) {
       const d2 = dist2(x, y, n.x, n.y);
-      if (d2 <= maxDist * maxDist && (!best || d2 < best.d2) && (n.ra || this.nodeDegree(n.id) >= 3)) best = { n, d2 };
+      if (d2 <= maxDist * maxDist && (!best || d2 < best.d2) && (n.ra || this.nodeDegree(n.id) >= 3) && this.nodeLayer(n.id) === 'road') best = { n, d2 };
     }
     return best ? best.n : null;
+  }
+
+  /** True when (x,y) lies within a water channel (plus clearance). */
+  inChannel(x, y, clearance = 2) {
+    for (const e of this.edges.values()) {
+      if (!isWaterType(e.type)) continue;
+      const half = this.width(e) / 2 + clearance;
+      const c = closestOnPolyline(x, y, roadGeometry(this, e));
+      if (c && c.d2 <= half * half) return true;
+    }
+    return false;
   }
 
   /** Edges touching a node. */

@@ -1,7 +1,7 @@
 // Automatic building footprints along zoned roads, road- and water-aware.
-import { ROAD_TYPES, roadGeometry } from './roads.js?v=2.1.0';
-import { MAT } from './terrain.js?v=2.1.0';
-import { polylineLength, pointAlong, mulberry32, strHash, SpatialHash, convexOverlap, polygonsIntersect, closestOnSegment, segmentIntersection, pointInPolygon, bbox } from './geom.js?v=2.1.0';
+import { ROAD_TYPES, roadGeometry } from './roads.js?v=2.2.0';
+import { MAT } from './terrain.js?v=2.2.0';
+import { polylineLength, pointAlong, mulberry32, strHash, SpatialHash, convexOverlap, polygonsIntersect, closestOnSegment, segmentIntersection, pointInPolygon, bbox } from './geom.js?v=2.2.0';
 
 export const BUILDING_STYLES = {
   rows:     { label: 'Terraced rows', lotW: [10, 16], depth: [12, 20], gap: [0, 0], setback: 4, jitter: 0 },
@@ -21,7 +21,7 @@ export function generateBuildings(graph, terrain, settings, obstacles = []) {
   const lotHash = new SpatialHash(40);
   const out = [];
   for (const o of obstacles) { if (!o.pts || o.pts.length < 3) continue; const bb = bbox(o.pts); lotHash.insert({ pts: o.pts, obstacle: true }, bb.minX - 2, bb.minY - 2, bb.maxX + 2, bb.maxY + 2); }
-  const edges = [...graph.edges.values()].filter((e) => e.zoned && !e.tunnel && ROAD_TYPES[e.type]?.zoned !== undefined && e.type !== 'rail' && e.type !== 'highway' && e.type !== 'path');
+  const edges = [...graph.edges.values()].filter((e) => e.zoned && !e.tunnel && ROAD_TYPES[e.type]?.zoned !== undefined && e.type !== 'rail' && e.type !== 'highway' && e.type !== 'path' && !ROAD_TYPES[e.type]?.water);
   // Stable order so results are deterministic between runs
   edges.sort((a, b) => (a.id < b.id ? -1 : 1));
 
