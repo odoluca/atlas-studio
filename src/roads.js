@@ -172,6 +172,27 @@ export class RoadGraph {
     this.version++;
   }
 
+  /** Roundabouts: nodes with a ring radius `ra`. Returns [{node, r, width, type}]. */
+  roundabouts() {
+    const out = [];
+    for (const n of this.nodes.values()) {
+      if (!n.ra) continue;
+      let width = 0, type = 'street', rank = -1;
+      for (const e of this.edgesAt(n.id)) { const rk = ROAD_TYPES[e.type]?.rank ?? 1; if (rk > rank || (rk === rank && this.width(e) > width)) { rank = rk; width = this.width(e); type = e.type; } }
+      out.push({ node: n, r: n.ra, width: width || 8, type });
+    }
+    return out;
+  }
+  /** Nearest junction node (degree >= 3) within maxDist, or null. */
+  nearestJunction(x, y, maxDist) {
+    let best = null;
+    for (const n of this.nodes.values()) {
+      const d2 = dist2(x, y, n.x, n.y);
+      if (d2 <= maxDist * maxDist && (!best || d2 < best.d2) && (n.ra || this.nodeDegree(n.id) >= 3)) best = { n, d2 };
+    }
+    return best ? best.n : null;
+  }
+
   /** Edges touching a node. */
   edgesAt(nid) { return [...this.edges.values()].filter((e) => e.a === nid || e.b === nid); }
 
@@ -229,7 +250,7 @@ export class RoadGraph {
   healNode(nid) {
     if (!this.nodes.has(nid)) return null;
     const es = this.edgesAt(nid);
-    if (es.length !== 2) return null;
+    if (es.length !== 2 || this.nodes.get(nid).ra) return null;
     const [e1, e2] = es;
     if (e1.type !== e2.type || e1.zoned !== e2.zoned || e1.width !== e2.width || e1.bridge !== e2.bridge || !!e1.tunnel !== !!e2.tunnel) return null;
     if (e1.name && e2.name && e1.name !== e2.name) return null;
@@ -317,12 +338,12 @@ export class RoadGraph {
   }
 
   toJSON() {
-    return { nodes: [...this.nodes.values()].map((n) => [n.id, +n.x.toFixed(2), +n.y.toFixed(2)]),
+    return { nodes: [...this.nodes.values()].map((n) => (n.ra ? [n.id, +n.x.toFixed(2), +n.y.toFixed(2), +n.ra.toFixed(1)] : [n.id, +n.x.toFixed(2), +n.y.toFixed(2)])),
       edges: [...this.edges.values()].map((e) => ({ id: e.id, a: e.a, b: e.b, pts: e.pts.map((p) => [+p.x.toFixed(2), +p.y.toFixed(2)]), ...edgeProps(e) })) };
   }
   static fromJSON(j) {
     const g = new RoadGraph();
-    for (const [id, x, y] of j?.nodes || []) g.nodes.set(id, { id, x, y });
+    for (const [id, x, y, ra] of j?.nodes || []) g.nodes.set(id, ra > 0 ? { id, x, y, ra } : { id, x, y });
     for (const e of j?.edges || []) g.edges.set(e.id, { id: e.id, a: e.a, b: e.b, pts: (e.pts || []).map(([x, y]) => ({ x, y })), type: e.type || 'street', name: e.name || '', zoned: !!e.zoned, width: e.width || 0, bridge: !!e.bridge, tunnel: !!e.tunnel, bstyle: e.bstyle || '', bdensity: e.bdensity || 0 });
     return g;
   }

@@ -22,6 +22,7 @@ const TOOLS = [
   { id: 'place', label: 'Place', key: 'P', icon: 'i-place' },
   { id: 'label', label: 'Label', key: 'L', icon: 'i-label' },
   { id: 'building', label: 'Building', key: 'N', icon: 'i-building' },
+  { id: 'roundabout', label: 'Roundabout', key: 'O', icon: 'i-roundabout' },
   { id: 'eraser', label: 'Eraser', key: 'E', icon: 'i-eraser' },
 ];
 
@@ -33,6 +34,7 @@ const DEFAULT_TS = {
   place: { category: 'cafe', name: '' },
   label: { kind: 'district', text: '' },
   building: { mode: 'rect', levels: 2, align: true, name: '' },
+  roundabout: { radius: 14 },
   eraser: { radius: 30, roads: true, places: true, labels: true, buildings: true },
 };
 
@@ -137,6 +139,7 @@ class App {
       place: 'Click to add a place. Edit its name and category in the Selection panel.',
       label: 'Click to add a label. Edit text, kind, size and angle in the Selection panel.',
       building: 'Drag a rectangle (aligned to the nearest road) or switch to Polygon and click corners. Automatic buildings keep clear of yours.',
+      roundabout: 'Click a junction to add a roundabout; click it again to remove it. Set the radius in the tool settings.',
       eraser: 'Drag to erase roads, places, labels and hand-drawn buildings. Use the Paint tool with Land to clear terrain paint.',
     };
     $('hint').textContent = this.draft?.hint || hints[this.tool] || '';
@@ -284,6 +287,9 @@ class App {
       case 'label': schema.push(
         { type: 'seg', key: 'kind', label: 'Kind', options: Object.entries(LABEL_KINDS).map(([k, v]) => [k, v.label]) },
         { type: 'text', key: 'text', label: 'Text', placeholder: 'Label text' }); break;
+      case 'roundabout': schema.push(
+        { type: 'range', key: 'radius', label: 'Radius', min: 6, max: 60, step: 1, unit: ' m' },
+        { type: 'info', html: 'Works on any junction with three or more roads. The ring takes the colour of the widest road meeting there. Changing the radius and clicking an existing roundabout resizes it.' }); break;
       case 'building': schema.push(
         { type: 'seg', key: 'mode', label: 'Shape', options: [['rect', 'Rectangle'], ['circle', 'Circle'], ['poly', 'Polygon']] },
         { type: 'range', key: 'levels', label: 'Levels', min: 1, max: 40, step: 1 },
@@ -750,6 +756,23 @@ class App {
   }
 
 
+  // ---------- Tools: roundabout ----------
+  move_roundabout() {
+    const p = this.pointer;
+    const n = this.doc.roads.nearestJunction(p.x, p.y, 25 / this.view.scale + 10);
+    this.hover = n ? { junction: n } : null;
+    this.canvas.style.cursor = n ? 'pointer' : 'crosshair';
+  }
+  up_roundabout() {
+    if (this.pointer.moved) return;
+    const p = this.pointer, ts = this.ts.roundabout;
+    const n = this.doc.roads.nearestJunction(p.x, p.y, 25 / this.view.scale + 10);
+    if (!n) { this.toast('Click a junction where three or more roads meet.'); return; }
+    const node = n;
+    if (node.ra && Math.abs(node.ra - ts.radius) < 0.5) { this.withFeatureHistory('Remove roundabout', () => { delete this.doc.roads.nodes.get(node.id).ra; }); this.toast('Roundabout removed'); }
+    else { this.withFeatureHistory(node.ra ? 'Resize roundabout' : 'Add roundabout', () => { this.doc.roads.nodes.get(node.id).ra = ts.radius; }); }
+  }
+
   // ---------- Tools: building ----------
   /** Unit direction of the nearest road within reach, or null. */
   nearestRoadDir(x, y, reach) {
@@ -1044,7 +1067,8 @@ class App {
     if (key === this.buildingsKey) return;
     // Defer while the pointer is held during terrain strokes to keep sculpting smooth
     if (this.pointer.down && (this.tool === 'terrain' || this.tool === 'paint')) return;
-    this.buildings = generateBuildings(this.doc.roads, this.doc.terrain, s, this.doc.buildings);
+    const raObstacles = this.doc.roads.roundabouts().map((ra) => ({ pts: this.circlePts(ra.node.x, ra.node.y, ra.r + ra.width / 2 + 2) }));
+    this.buildings = generateBuildings(this.doc.roads, this.doc.terrain, s, raObstacles.length ? [...this.doc.buildings, ...raObstacles] : this.doc.buildings);
     this.buildingsKey = key;
     this.dirty = true;
   }
@@ -1127,6 +1151,11 @@ class App {
         if (b.shape === 'circle') { painter.circle(b.cx, b.cy, 3, { fill: acc }); painter.circle(b.cx + b.r, b.cy, sel.handle?.kind === 'radius' ? 6 : 4.5, { fill: sel.handle?.kind === 'radius' ? acc : '#fff', stroke: acc, px: 2 }); }
         else b.pts.forEach((q, i) => { const active = sel.handle?.kind === 'corner' && sel.handle.index === i; painter.circle(q.x, q.y, active ? 6 : 4.5, { fill: active ? acc : '#fff', stroke: acc, px: 2 }); });
       }
+    }
+    if (this.tool === 'roundabout' && this.hover?.junction) {
+      const n = this.hover.junction, r = n.ra || this.ts.roundabout.radius;
+      painter.circle(n.x, n.y, r * v.scale, { stroke: acc, px: 2 });
+      painter.circle(n.x, n.y, 4, { fill: acc });
     }
     if (this.tool === 'building' && d) {
       let pts = null;

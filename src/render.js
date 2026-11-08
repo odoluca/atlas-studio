@@ -380,6 +380,30 @@ export function renderRoads(painter, doc, scale, bounds) {
       painter.strokePolys(grp.polys, { color: rs.fill, width: grp.width, minPx: 1, dash: rs.dash });
     }
   }
+  renderRoundabouts(painter, doc, scale, bounds);
+}
+
+/** Roundabouts: ring road around the junction node plus a central island. */
+export function renderRoundabouts(painter, doc, scale, bounds) {
+  const S = STYLES[doc.settings.style] || STYLES.atlas;
+  for (const ra of doc.roads.roundabouts()) {
+    const { node: n, r, width, type } = ra;
+    if (bounds && (n.x < bounds.minX - r - 50 || n.x > bounds.maxX + r + 50 || n.y < bounds.minY - r - 50 || n.y > bounds.maxY + r + 50)) continue;
+    const rs = S.roads[type] || S.roads.street;
+    const ring = [];
+    const k = Math.max(24, Math.round(r * 2));
+    for (let i = 0; i <= k; i++) { const a = (i / k) * Math.PI * 2; ring.push({ x: n.x + Math.cos(a) * r, y: n.y + Math.sin(a) * r }); }
+    const casingPx = scale * width < 3 ? 0 : 2;
+    // Island first (covers the approach roads' overlap in the middle), then the ring on top
+    const island = r - width / 2;
+    if (island > 1) {
+      const isl = ring.map((p) => ({ x: n.x + (p.x - n.x) * (island / r), y: n.y + (p.y - n.y) * (island / r) }));
+      painter.fillPolys([isl], S.roundaboutIsland || S.park, { rule: 'nonzero' });
+    }
+    painter.strokePolys([ring], { color: rs.casing, width: width + casingPx / scale, minPx: 1.5, closed: true });
+    painter.strokePolys([ring], { color: rs.fill, width, minPx: 1, closed: true });
+    if (island > 1) painter.strokePolys([ring.map((p) => ({ x: n.x + (p.x - n.x) * (island / r), y: n.y + (p.y - n.y) * (island / r) }))], { color: rs.casing, width: 0, minPx: 1, closed: true, alpha: 0.8 });
+  }
 }
 
 export function renderBuildings(painter, doc, buildings, scale, bounds) {

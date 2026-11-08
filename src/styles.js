@@ -2,7 +2,7 @@
 export const STYLES = {
   atlas: {
     label: 'Atlas',
-    land: '#f1efe9', park: '#cfe6c3', forest: '#b7d6a6', forestDot: '#8fbb7f', sand: '#f3e7c4', water: '#a9d0ea', waterEdge: '#8ebedf', paved: '#e2e0da', farmland: '#eef0d4', farmLine: '#d9dbb4',
+    land: '#f1efe9', park: '#cfe6c3', forest: '#b7d6a6', forestDot: '#8fbb7f', sand: '#f3e7c4', water: '#a9d0ea', waterEdge: '#8ebedf', paved: '#e2e0da', farmland: '#eef0d4', farmLine: '#d9dbb4', roundaboutIsland: '#cfe6c3',
     contour: '#b38b5d', contourIndex: '#9c7246', contourLabel: '#8a6238', contourAlpha: 0.55,
     hillshadeDark: 'rgba(60,45,30,1)', hillshadeLight: 'rgba(255,255,255,1)', hillshadeStrength: 0.35,
     building: '#dad5cb', buildingEdge: '#c7c1b4',
@@ -21,7 +21,7 @@ export const STYLES = {
   },
   soft: {
     label: 'Soft',
-    land: '#faf6f0', park: '#dcefd0', forest: '#c9e2b8', forestDot: '#a7cc96', sand: '#f8eed3', water: '#c4dff0', waterEdge: '#aacde3', paved: '#ede9e2', farmland: '#f3f3dc', farmLine: '#e1e1c3',
+    land: '#faf6f0', park: '#dcefd0', forest: '#c9e2b8', forestDot: '#a7cc96', sand: '#f8eed3', water: '#c4dff0', waterEdge: '#aacde3', paved: '#ede9e2', farmland: '#f3f3dc', farmLine: '#e1e1c3', roundaboutIsland: '#dcefd0',
     contour: '#c9a07a', contourIndex: '#b18863', contourLabel: '#9a7555', contourAlpha: 0.45,
     hillshadeDark: 'rgba(70,55,40,1)', hillshadeLight: 'rgba(255,255,255,1)', hillshadeStrength: 0.25,
     building: '#eae4d9', buildingEdge: '#d9d2c5',
@@ -40,7 +40,7 @@ export const STYLES = {
   },
   night: {
     label: 'Night',
-    land: '#1d2129', park: '#213229', forest: '#1c2c24', forestDot: '#2c4536', sand: '#2e2b23', water: '#141c2e', waterEdge: '#1d2a44', paved: '#262a33', farmland: '#252a24', farmLine: '#30362d',
+    land: '#1d2129', park: '#213229', forest: '#1c2c24', forestDot: '#2c4536', sand: '#2e2b23', water: '#141c2e', waterEdge: '#1d2a44', paved: '#262a33', farmland: '#252a24', farmLine: '#30362d', roundaboutIsland: '#213229',
     contour: '#6f6a5a', contourIndex: '#8a8470', contourLabel: '#a39c86', contourAlpha: 0.6,
     hillshadeDark: 'rgba(0,0,0,1)', hillshadeLight: 'rgba(255,255,255,1)', hillshadeStrength: 0.3,
     building: '#2b303b', buildingEdge: '#394050',

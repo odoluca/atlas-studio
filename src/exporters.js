@@ -122,6 +122,11 @@ export function toGeoJSON(doc, buildings) {
   for (const c of contours) features.push({ type: 'Feature', properties: { layer: 'contour', ele: c.ele, index: c.index }, geometry: { type: 'LineString', coordinates: c.pts.map((p) => geo(p.x, p.y)) } });
   const g = doc.roads;
   for (const e of g.edges.values()) features.push({ type: 'Feature', id: e.id, properties: { layer: 'road', kind: e.type, name: e.name || undefined, width: g.width(e), ...ROAD_TAGS[e.type], ...(e.tunnel ? { tunnel: 'yes', layer: -1 } : {}) }, geometry: { type: 'LineString', coordinates: roadGeometry(g, e).map((p) => geo(p.x, p.y)) } });
+  for (const ra of g.roundabouts()) {
+    const ring = []; const k = 32;
+    for (let i = 0; i <= k; i++) { const a = (i / k) * Math.PI * 2; ring.push(geo(ra.node.x + Math.cos(a) * ra.r, ra.node.y + Math.sin(a) * ra.r)); }
+    features.push({ type: 'Feature', properties: { layer: 'road', kind: ra.type, junction: 'roundabout', radius: ra.r, ...ROAD_TAGS[ra.type] }, geometry: { type: 'LineString', coordinates: ring } });
+  }
   for (const b of buildings || []) features.push({ type: 'Feature', properties: { layer: 'building', building: 'yes', 'building:levels': b.h, name: b.name || undefined, manual: b.manual ? true : undefined }, geometry: { type: 'Polygon', coordinates: [ring(b.pts)] } });
   for (const p of doc.places) features.push({ type: 'Feature', id: p.id, properties: { layer: 'place', kind: p.category, name: p.name || undefined, ...(PLACE_TAGS[p.category] || {}) }, geometry: { type: 'Point', coordinates: geo(p.x, p.y) } });
   for (const l of doc.labels) features.push({ type: 'Feature', id: l.id, properties: { layer: 'label', kind: l.kind, name: l.text, ...(LABEL_TAGS[l.kind] || {}) }, geometry: { type: 'Point', coordinates: geo(l.x, l.y) } });
@@ -157,6 +162,11 @@ export function toOSM(doc, buildings) {
     const pts = roadGeometry(g, e);
     const ids = [nodeIdMap.get(e.a), ...pts.slice(1, -1).map((p) => node(p.x, p.y)), nodeIdMap.get(e.b)];
     way(ids, { ...ROAD_TAGS[e.type], name: e.name || undefined, width: e.width ? e.width : undefined, ...(e.tunnel ? { tunnel: 'yes', layer: '-1' } : {}) });
+  }
+  for (const ra of g.roundabouts()) {
+    const pts = []; const k = 32;
+    for (let i = 0; i < k; i++) { const a = (i / k) * Math.PI * 2; pts.push({ x: ra.node.x + Math.cos(a) * ra.r, y: ra.node.y + Math.sin(a) * ra.r }); }
+    closedWay(pts, { ...ROAD_TAGS[ra.type], junction: 'roundabout' });
   }
   for (const b of buildings || []) closedWay(b.pts, { building: 'yes', 'building:levels': b.h, name: b.name || undefined });
   for (const p of doc.places) node(p.x, p.y, { ...(PLACE_TAGS[p.category] || { tourism: 'attraction' }), name: p.name || undefined });
