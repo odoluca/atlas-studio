@@ -513,7 +513,7 @@ class App {
   onUp(e) {
     this.updatePointer(e);
     const p = this.pointer;
-    if (this.draft?.kind === 'pan') { this.draft = null; p.down = false; this.canvas.style.cursor = this.tool === 'pan' ? 'grab' : this.tool === 'select' ? 'default' : 'crosshair'; this.scheduleAutosave(); return; }
+    if (this.draft?.kind === 'pan') { this.onMove(e); this.draft = null; p.down = false; this.canvas.style.cursor = this.tool === 'pan' ? 'grab' : this.tool === 'select' ? 'default' : 'crosshair'; this.scheduleAutosave(); return; }
     const h = this['up_' + this.tool];
     if (p.down && h) h.call(this, e);
     p.down = false;
