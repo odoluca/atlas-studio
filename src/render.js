@@ -351,6 +351,7 @@ export function renderRoads(painter, doc, scale, bounds) {
     const grp = byType.get(key);
     grp.polys.push(pts); grp.edges.push(e);
   }
+  renderRoundabouts(painter, doc, scale, bounds, 'casing');
   const groups = [...byType.values()].sort((a, b) => a.rank - b.rank || a.width - b.width);
   // casings by rank then fills by rank: group by rank
   const ranks = [...new Set(groups.map((x) => x.rank))].sort((a, b) => a - b);
@@ -380,11 +381,11 @@ export function renderRoads(painter, doc, scale, bounds) {
       painter.strokePolys(grp.polys, { color: rs.fill, width: grp.width, minPx: 1, dash: rs.dash });
     }
   }
-  renderRoundabouts(painter, doc, scale, bounds);
+  renderRoundabouts(painter, doc, scale, bounds, 'fill');
 }
 
-/** Roundabouts: ring road around the junction node plus a central island. */
-export function renderRoundabouts(painter, doc, scale, bounds) {
+/** Roundabouts: ring road around the junction node plus a central island. phase: 'casing' (under road fills) or 'fill'. */
+export function renderRoundabouts(painter, doc, scale, bounds, phase = 'fill') {
   const S = STYLES[doc.settings.style] || STYLES.atlas;
   for (const ra of doc.roads.roundabouts()) {
     const { node: n, r, width, type } = ra;
@@ -394,15 +395,15 @@ export function renderRoundabouts(painter, doc, scale, bounds) {
     const k = Math.max(24, Math.round(r * 2));
     for (let i = 0; i <= k; i++) { const a = (i / k) * Math.PI * 2; ring.push({ x: n.x + Math.cos(a) * r, y: n.y + Math.sin(a) * r }); }
     const casingPx = scale * width < 3 ? 0 : 2;
-    // Island first (covers the approach roads' overlap in the middle), then the ring on top
+    if (phase === 'casing') { painter.strokePolys([ring], { color: rs.casing, width: width + casingPx / scale, minPx: 1.5, closed: true }); continue; }
+    // Ring fill over the approach roads, then the island covering the middle
+    painter.strokePolys([ring], { color: rs.fill, width, minPx: 1, closed: true });
     const island = r - width / 2;
     if (island > 1) {
       const isl = ring.map((p) => ({ x: n.x + (p.x - n.x) * (island / r), y: n.y + (p.y - n.y) * (island / r) }));
       painter.fillPolys([isl], S.roundaboutIsland || S.park, { rule: 'nonzero' });
+      painter.strokePolys([isl], { color: rs.casing, width: 0, minPx: 1, closed: true, alpha: 0.8 });
     }
-    painter.strokePolys([ring], { color: rs.casing, width: width + casingPx / scale, minPx: 1.5, closed: true });
-    painter.strokePolys([ring], { color: rs.fill, width, minPx: 1, closed: true });
-    if (island > 1) painter.strokePolys([ring.map((p) => ({ x: n.x + (p.x - n.x) * (island / r), y: n.y + (p.y - n.y) * (island / r) }))], { color: rs.casing, width: 0, minPx: 1, closed: true, alpha: 0.8 });
   }
 }
 
