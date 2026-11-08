@@ -230,11 +230,11 @@ export function renderTerrain(painter, doc, region, scale, opts = {}) {
 
   // Farmland field lines: a patchwork of blocks with alternating row direction
   if (scale >= 0.45) {
-    const rowGap = 12, stepAlong = 8, block = 180;
+    const rowGap = 6, stepAlong = 6, block = 180;
     const lines = [];
     const i0 = Math.floor(region.minX / rowGap) - 1, i1 = Math.ceil(region.maxX / rowGap) + 1;
     const j0 = Math.floor(region.minY / rowGap) - 1, j1 = Math.ceil(region.maxY / rowGap) + 1;
-    if ((i1 - i0) * (j1 - j0) < 300000) {
+    if ((i1 - i0) * (j1 - j0) < 1000000) {
       const horizontal = (x, y) => hash2(Math.floor(x / block), Math.floor(y / block), 11) < 0.5;
       const farm = (x, y) => T.materialAt(x, y) === MAT.FARMLAND;
       for (let j = j0; j <= j1; j++) {
