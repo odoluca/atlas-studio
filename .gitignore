@@ -1,7 +1,5 @@
 # Build artefacts
 atlas-studio-site.zip
-# Previous version kept locally for reference
-_old/
 # OS / editor
 Thumbs.db
 .DS_Store

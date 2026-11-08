@@ -8,7 +8,7 @@ A fictional map designer that runs entirely in the browser: no build step, no de
 python scripts/serve.py 8080
 ```
 
-Then open http://127.0.0.1:8080. The app uses ES modules, so it needs to be served over HTTP (opening `index.html` directly from disk will not work in most browsers). Any static file server works; the bundled one just disables caching so edits show up on reload.
+Then open http://127.0.0.1:8080 (on Windows, `run.bat` does both). A hosted copy runs at https://odoluca.github.io/atlas-studio/. The app uses ES modules, so it needs to be served over HTTP (opening `index.html` directly from disk will not work in most browsers). Any static file server works; the bundled one just disables caching so edits show up on reload.
 
 ## Deploy to static hosting (InfinityFree or similar)
 
@@ -70,4 +70,3 @@ Then open http://127.0.0.1:8080. The app uses ES modules, so it needs to be serv
 
 `npm test` runs the Node unit tests (`tests/*.test.mjs`, Node 18+). `npm run check` syntax-checks the sources. No `npm install` is required.
 
-The previous version of the app is kept in `_old/` for reference.
