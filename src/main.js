@@ -685,7 +685,7 @@ class App {
     else if (d?.kind === 'dragHandle') {
       const e = this.doc.roads.edges.get(this.selection.id);
       if (!e) return;
-      if (d.handle.kind === 'node') this.doc.roads.moveNode(d.handle.id, p.x, p.y);
+      if (d.handle.kind === 'node') { const t = this.doc.roads.snapTargetForNode(d.handle.id, p.x, p.y, 12 / this.view.scale + 4); d.snapTarget = t; this.doc.roads.moveNode(d.handle.id, t ? t.x : p.x, t ? t.y : p.y); }
       else { e.pts[d.handle.index].x = p.x; e.pts[d.handle.index].y = p.y; this.doc.roads.version++; }
       d.handle.x = p.x; d.handle.y = p.y;
     }
@@ -697,9 +697,19 @@ class App {
       this.history.push({ label: 'Move', undo: () => { f.x = from.x; f.y = from.y; this.markChanged(); }, redo: () => { f.x = to.x; f.y = to.y; this.markChanged(); } });
       this.markChanged();
     } else if ((d?.kind === 'dragHandle' || d?.kind === 'dragBuilding' || d?.kind === 'dragCorner' || d?.kind === 'dragRadius') && p.moved) {
-      const after = this.featureSnapshot(), before = d.before, sel = this.selection;
-      this.history.push({ label: d.kind === 'dragHandle' ? 'Reshape road' : d.kind === 'dragBuilding' ? 'Move building' : d.kind === 'dragRadius' ? 'Resize building' : 'Reshape building', undo: () => this.restoreFeatures(before), redo: () => this.restoreFeatures(after) });
-      this.selection = sel;
+      let sel = this.selection;
+      if (d.kind === 'dragHandle' && d.handle.kind === 'node' && d.snapTarget) {
+        const edgeIdBefore = sel.id;
+        const node = this.doc.roads.connectNode(d.handle.id, d.snapTarget);
+        if (node) {
+          const e = this.doc.roads.edges.get(edgeIdBefore) || this.doc.roads.edgesAt(node.id)[0];
+          sel = e ? { kind: 'road', id: e.id } : null;
+          this.toast('Roads connected');
+        }
+      }
+      const after = this.featureSnapshot(), before = d.before;
+      this.history.push({ label: d.kind === 'dragHandle' ? (d.snapTarget ? 'Connect roads' : 'Reshape road') : d.kind === 'dragBuilding' ? 'Move building' : d.kind === 'dragRadius' ? 'Resize building' : 'Reshape building', undo: () => this.restoreFeatures(before), redo: () => this.restoreFeatures(after) });
+      this.selection = sel; this.renderSelectionPanel();
       this.invalidateBuildings(); this.markChanged();
     }
     this.draft = null;
@@ -1192,6 +1202,7 @@ class App {
         if (d.kind === 'bPoly') for (const q of d.pts) painter.circle(q.x, q.y, 3.5, { fill: '#fff', stroke: acc, px: 1.5 });
       }
     }
+    if (d?.kind === 'dragHandle' && d.snapTarget) painter.circle(d.snapTarget.x, d.snapTarget.y, 9, { stroke: acc, px: 2.5 });
     // hover
     if (this.tool === 'select' && this.hover && !p.down && (!sel || sel.id !== this.hover.id)) {
       if (this.hover.kind === 'road') { const e = g.edges.get(this.hover.id); if (e) painter.strokePolys([roadGeometry(g, e)], { color: acc, width: g.width(e) + 4 / v.scale, minPx: 4, alpha: 0.18 }); }

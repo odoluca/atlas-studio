@@ -215,6 +215,49 @@ export class RoadGraph {
     return false;
   }
 
+  /**
+   * Where a node being dragged to (x,y) would connect: a nearby node or edge of the same layer,
+   * excluding the node itself, its own edges and its direct neighbours. Returns {kind,id,x,y,seg?} or null.
+   */
+  snapTargetForNode(nid, x, y, maxDist) {
+    const own = this.edgesAt(nid);
+    if (!own.length) return null;
+    const layer = this.nodeLayer(nid);
+    const ownIds = new Set(own.map((e) => e.id));
+    const neighbours = new Set(own.map((e) => (e.a === nid ? e.b : e.a)));
+    const md2 = maxDist * maxDist;
+    let best = null;
+    for (const n of this.nodes.values()) {
+      if (n.id === nid || neighbours.has(n.id) || this.nodeLayer(n.id) !== layer) continue;
+      const d2 = dist2(x, y, n.x, n.y);
+      if (d2 <= md2 && (!best || d2 < best.d2)) best = { kind: 'node', id: n.id, x: n.x, y: n.y, d2 };
+    }
+    if (best) return best;
+    for (const e of this.edges.values()) {
+      if (ownIds.has(e.id) || this.layerOf(e) !== layer) continue;
+      const pts = this.edgePoints(e);
+      for (let i = 0; i < pts.length - 1; i++) {
+        const c = closestOnSegment(x, y, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y);
+        if (c.d2 <= md2 && (!best || c.d2 < best.d2)) best = { kind: 'edge', id: e.id, x: c.x, y: c.y, seg: i, d2: c.d2 };
+      }
+    }
+    return best;
+  }
+
+  /** Connect node nid to a snap target (from snapTargetForNode): merges nodes, splitting the target edge if needed. */
+  connectNode(nid, target) {
+    let tn;
+    if (target.kind === 'node') tn = this.nodes.get(target.id);
+    else { if (!this.edges.has(target.id)) return null; tn = this.splitEdge(target.id, target.seg, target.x, target.y); }
+    if (!tn || tn.id === nid) return null;
+    for (const e of this.edges.values()) { if (e.a === nid) e.a = tn.id; if (e.b === nid) e.b = tn.id; }
+    for (const e of [...this.edges.values()]) if (e.a === e.b) this.edges.delete(e.id);
+    this.nodes.delete(nid);
+    this.healNode(tn.id);
+    this.version++;
+    return this.nodes.get(tn.id) || null;
+  }
+
   /** Edges touching a node. */
   edgesAt(nid) { return [...this.edges.values()].filter((e) => e.a === nid || e.b === nid); }
 

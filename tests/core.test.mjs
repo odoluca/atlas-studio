@@ -167,3 +167,25 @@ test('water channels: roads cross without junctions, channels join each other', 
   assert.equal([...g.edges.values()].filter((e) => e.type === 'river').length, 3, 'channel split at the confluence');
   assert.ok(g.inChannel(50, 50)); assert.ok(!g.inChannel(50, 90));
 });
+
+test('roads: dragging an end onto another road connects them', () => {
+  const g = new RoadGraph();
+  g.addRoad([{ x: 0, y: 0 }, { x: 300, y: 0 }], { type: 'street' });
+  const [e2] = g.addRoad([{ x: 150, y: 100 }, { x: 150, y: 200 }], { type: 'street' });
+  const endNode = e2.a; // at (150,100)
+  const t = g.snapTargetForNode(endNode, 150, 3, 10);
+  assert.ok(t && t.kind === 'edge', 'snaps to the street');
+  const n = g.connectNode(endNode, t);
+  assert.ok(n);
+  assert.equal(g.nodeDegree(n.id), 3, 'T junction');
+  assert.equal(g.edges.size, 3);
+  // end-to-end: two straight pieces fuse into one
+  const h = new RoadGraph();
+  h.addRoad([{ x: 0, y: 0 }, { x: 100, y: 0 }], { type: 'street', name: 'Elm' });
+  const [b] = h.addRoad([{ x: 130, y: 2 }, { x: 250, y: 0 }], { type: 'street' });
+  const t2 = h.snapTargetForNode(b.a, 101, 0, 10);
+  assert.equal(t2.kind, 'node');
+  h.connectNode(b.a, t2);
+  assert.equal(h.edges.size, 1, 'fused');
+  assert.equal([...h.edges.values()][0].name, 'Elm');
+});
