@@ -31,9 +31,10 @@ const MAT_TAGS = {
   [MAT.FOREST]: { natural: 'wood', landuse: 'forest' },
   [MAT.SAND]: { natural: 'sand' },
   [MAT.PAVED]: { highway: 'pedestrian', area: 'yes', surface: 'paved' },
+  [MAT.FARMLAND]: { landuse: 'farmland' },
   [MAT.WATER]: { natural: 'water' },
 };
-const MAT_KIND = { [MAT.PARK]: 'park', [MAT.FOREST]: 'forest', [MAT.SAND]: 'sand', [MAT.PAVED]: 'paved', [MAT.WATER]: 'water' };
+const MAT_KIND = { [MAT.PARK]: 'park', [MAT.FOREST]: 'forest', [MAT.SAND]: 'sand', [MAT.PAVED]: 'paved', [MAT.WATER]: 'water', [MAT.FARMLAND]: 'farmland' };
 export const PLACE_TAGS = {
   cafe: { amenity: 'cafe' }, restaurant: { amenity: 'restaurant' }, bar: { amenity: 'pub' }, bakery: { shop: 'bakery' },
   shop: { shop: 'yes' }, mall: { shop: 'mall' }, supermarket: { shop: 'supermarket' }, market: { amenity: 'marketplace' },
@@ -58,7 +59,7 @@ function terrainVectors(doc, bounds, maxSamples = 1400) {
   const { h, m } = T.sample(x0, y0, step, nx, ny);
   const sea = T.seaLevel;
   const areas = []; // {kind, rings:[outer, ...holes]}
-  const layers = [[MAT.SAND, (i) => m[i] === MAT.SAND], [MAT.PAVED, (i) => m[i] === MAT.PAVED], [MAT.PARK, (i) => m[i] === MAT.PARK], [MAT.FOREST, (i) => m[i] === MAT.FOREST], [MAT.WATER, (i) => m[i] === MAT.WATER || h[i] < sea]];
+  const layers = [[MAT.FARMLAND, (i) => m[i] === MAT.FARMLAND], [MAT.SAND, (i) => m[i] === MAT.SAND], [MAT.PAVED, (i) => m[i] === MAT.PAVED], [MAT.PARK, (i) => m[i] === MAT.PARK], [MAT.FOREST, (i) => m[i] === MAT.FOREST], [MAT.WATER, (i) => m[i] === MAT.WATER || h[i] < sea]];
   for (const [id, fn] of layers) {
     const { lines } = maskOutlines(step, x0, y0, step, nx, ny, fn);
     for (const poly of nestRings(lines)) areas.push({ kind: MAT_KIND[id], mat: id, rings: poly });

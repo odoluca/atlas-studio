@@ -204,7 +204,7 @@ export function renderTerrain(painter, doc, region, scale, opts = {}) {
   painter.fillPolys([[{ x: region.minX, y: region.minY }, { x: region.maxX, y: region.minY }, { x: region.maxX, y: region.maxY }, { x: region.minX, y: region.maxY }]], S.land, { rule: 'nonzero' });
 
   // Painted materials (non-water)
-  const matLayers = [[MAT.SAND, S.sand], [MAT.PAVED, S.paved], [MAT.PARK, S.park], [MAT.FOREST, S.forest]];
+  const matLayers = [[MAT.FARMLAND, S.farmland], [MAT.SAND, S.sand], [MAT.PAVED, S.paved], [MAT.PARK, S.park], [MAT.FOREST, S.forest]];
   const forestLines = [];
   for (const [id, color] of matLayers) {
     const { lines } = maskOutlines(step, x0, y0, step, nx, ny, (i) => m[i] === id);
@@ -225,6 +225,39 @@ export function renderTerrain(painter, doc, region, scale, opts = {}) {
         if (T.materialAt(px, py) === MAT.FOREST) pts.push({ x: px, y: py });
       }
       if (pts.length) painter.dots(pts, 1.3, S.forestDot);
+    }
+  }
+
+  // Farmland field lines: a patchwork of blocks with alternating row direction
+  if (scale >= 0.45) {
+    const rowGap = 12, stepAlong = 8, block = 180;
+    const lines = [];
+    const i0 = Math.floor(region.minX / rowGap) - 1, i1 = Math.ceil(region.maxX / rowGap) + 1;
+    const j0 = Math.floor(region.minY / rowGap) - 1, j1 = Math.ceil(region.maxY / rowGap) + 1;
+    if ((i1 - i0) * (j1 - j0) < 300000) {
+      const horizontal = (x, y) => hash2(Math.floor(x / block), Math.floor(y / block), 11) < 0.5;
+      const farm = (x, y) => T.materialAt(x, y) === MAT.FARMLAND;
+      for (let j = j0; j <= j1; j++) {
+        const y = j * rowGap + rowGap / 2;
+        let run = null;
+        for (let x = region.minX; x <= region.maxX + stepAlong; x += stepAlong) {
+          const on = farm(x, y) && horizontal(x, y);
+          if (on) { if (!run) run = [{ x, y }]; else run.push({ x, y }); }
+          else if (run) { if (run.length > 1) lines.push(run); run = null; }
+        }
+        if (run && run.length > 1) lines.push(run);
+      }
+      for (let i = i0; i <= i1; i++) {
+        const x = i * rowGap + rowGap / 2;
+        let run = null;
+        for (let y = region.minY; y <= region.maxY + stepAlong; y += stepAlong) {
+          const on = farm(x, y) && !horizontal(x, y);
+          if (on) { if (!run) run = [{ x, y }]; else run.push({ x, y }); }
+          else if (run) { if (run.length > 1) lines.push(run); run = null; }
+        }
+        if (run && run.length > 1) lines.push(run);
+      }
+      if (lines.length) painter.strokePolys(lines, { color: S.farmLine, width: 0, px: 1, cap: 'butt', alpha: 0.8 });
     }
   }
 

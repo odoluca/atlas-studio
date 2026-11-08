@@ -48,7 +48,7 @@ export function generateBuildings(graph, terrain, settings, obstacles = []) {
   };
   const badGround = (p) => {
     const m = terrain.materialAt(p.x, p.y);
-    return m === MAT.WATER || m === MAT.PARK || m === MAT.FOREST || terrain.heightAt(p.x, p.y) < terrain.seaLevel;
+    return m === MAT.WATER || m === MAT.PARK || m === MAT.FOREST || m === MAT.FARMLAND || terrain.heightAt(p.x, p.y) < terrain.seaLevel;
   };
 
   for (const e of edges) {

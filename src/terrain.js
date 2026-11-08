@@ -5,8 +5,8 @@ export const TILE = 64;          // cells per tile side
 export const CELL = 4;           // meters per cell
 export const TILE_M = TILE * CELL;
 
-export const MAT = { LAND: 0, PARK: 1, FOREST: 2, SAND: 3, WATER: 4, PAVED: 5 };
-export const MAT_NAMES = ['Land', 'Park', 'Forest', 'Sand', 'Water', 'Paved'];
+export const MAT = { LAND: 0, PARK: 1, FOREST: 2, SAND: 3, WATER: 4, PAVED: 5, FARMLAND: 6 };
+export const MAT_NAMES = ['Land', 'Park', 'Forest', 'Sand', 'Water', 'Paved', 'Farmland'];
 
 const tileKey = (tx, ty) => (tx + 32768) * 65536 + (ty + 32768);
 

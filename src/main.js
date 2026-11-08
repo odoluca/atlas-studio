@@ -269,7 +269,7 @@ class App {
         { type: 'check', key: 'snapAngle', label: 'Snap angle to 15°' },
         { type: 'info', html: 'Start on an existing road to align the grid with it. Hold <kbd>Shift</kbd> while dragging to lock the angle to 15° steps.' }); break;
       case 'paint': schema.push(
-        { type: 'swatches', key: 'material', label: 'Material', options: [[MAT.PARK, 'Park', '#cfe6c3'], [MAT.FOREST, 'Forest', '#b7d6a6'], [MAT.SAND, 'Sand', '#f3e7c4'], [MAT.WATER, 'Water', '#a9d0ea'], [MAT.PAVED, 'Paved', '#e2e0da'], [MAT.LAND, 'Land', '#f1efe9']] },
+        { type: 'swatches', key: 'material', label: 'Material', options: [[MAT.PARK, 'Park', '#cfe6c3'], [MAT.FOREST, 'Forest', '#b7d6a6'], [MAT.SAND, 'Sand', '#f3e7c4'], [MAT.WATER, 'Water', '#a9d0ea'], [MAT.PAVED, 'Paved', '#e2e0da'], [MAT.FARMLAND, 'Farmland', '#eef0d4'], [MAT.LAND, 'Land', '#f1efe9']] },
         { type: 'range', key: 'radius', label: 'Brush size', min: 5, max: 400, step: 1, unit: ' m' },
         { type: 'info', html: 'Edges are fitted with smooth curves. Buildings never appear on water, parks or forest. Paint <b>Land</b> to erase.' }); break;
       case 'terrain': schema.push(
