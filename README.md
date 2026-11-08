@@ -2,19 +2,9 @@
 
 A fictional map designer that runs entirely in the browser: no build step, no dependencies, no backend. Sculpt terrain with contour lines and hill shading, paint parks, forests, sand and water with smooth edges, draw roads that snap and join, lay out Cities-Skylines-style street grids that stop at the water, and let buildings fill in along the streets automatically.
 
-## Run locally
+## Use online
 
-```
-python scripts/serve.py 8080
-```
-
-Then open http://127.0.0.1:8080 (on Windows, `run.bat` does both). A hosted copy runs at https://odoluca.github.io/atlas-studio/. The app uses ES modules, so it needs to be served over HTTP (opening `index.html` directly from disk will not work in most browsers). Any static file server works; the bundled one just disables caching so edits show up on reload.
-
-## Deploy to static hosting (InfinityFree or similar)
-
-1. Run `python scripts/package.py` to build `atlas-studio-site.zip`.
-2. Upload the contents of the archive into your `htdocs` folder (or a subfolder). Keep the `src/` and `assets/` folders next to `index.html`.
-3. Visit the URL. There is nothing to configure.
+A hosted copy runs at https://odoluca.github.io/atlas-studio/.
 
 ## Tools
 
