@@ -285,11 +285,11 @@ class App {
         { type: 'seg', key: 'kind', label: 'Kind', options: Object.entries(LABEL_KINDS).map(([k, v]) => [k, v.label]) },
         { type: 'text', key: 'text', label: 'Text', placeholder: 'Label text' }); break;
       case 'building': schema.push(
-        { type: 'seg', key: 'mode', label: 'Shape', options: [['rect', 'Rectangle'], ['poly', 'Polygon']] },
+        { type: 'seg', key: 'mode', label: 'Shape', options: [['rect', 'Rectangle'], ['circle', 'Circle'], ['poly', 'Polygon']] },
         { type: 'range', key: 'levels', label: 'Levels', min: 1, max: 40, step: 1 },
         { type: 'check', key: 'align', label: 'Align rectangle to nearest road' },
         { type: 'text', key: 'name', label: 'Name (optional)', placeholder: 'Name for the next building' },
-        { type: 'info', html: 'Rectangle: press and drag. Polygon: click each corner, then click the first corner, double-click or press <kbd>Enter</kbd> to close. Hand-drawn buildings are kept when automatic buildings regenerate, and automatic ones keep clear of them.' }); break;
+        { type: 'info', html: 'Rectangle: press and drag. Circle: press at the centre and drag out the radius. Polygon: click each corner, then click the first corner, double-click or press <kbd>Enter</kbd> to close. Hand-drawn buildings are kept when automatic buildings regenerate, and automatic ones keep clear of them.' }); break;
       case 'eraser': schema.push(
         { type: 'range', key: 'radius', label: 'Brush size', min: 5, max: 300, step: 1, unit: ' m' },
         { type: 'check', key: 'roads', label: 'Erase roads' },
@@ -401,12 +401,13 @@ class App {
     } else if (sel.kind === 'building') {
       const b = this.doc.buildings.find((x) => x.id === sel.id);
       if (!b) { this.selection = null; return this.renderSelectionPanel(); }
-      const set = (k, v) => { if (typeof v === 'number' && !Number.isFinite(v)) return; const prev = b[k]; b[k] = v; this.history.push({ label: 'Edit building', undo: () => { b[k] = prev; this.markChanged(); }, redo: () => { b[k] = v; this.markChanged(); } }); this.markChanged(); };
+      const set = (k, v) => { if (typeof v === 'number' && !Number.isFinite(v)) return; const prev = b[k], prevPts = b.pts; const apply = (val) => { b[k] = val; if (k === 'r') b.pts = this.circlePts(b.cx, b.cy, val); this.markChanged(); }; apply(v); this.history.push({ label: 'Edit building', undo: () => { b[k] = prev; b.pts = prevPts; this.markChanged(); }, redo: () => apply(v) }); };
       this.form(el, [
         { type: 'section', label: 'Building' },
         { type: 'text', key: 'name', label: 'Name (optional)', placeholder: 'e.g. Town Hall', autofocus: sel.fresh },
         { type: 'range', key: 'h', label: 'Levels', min: 1, max: 40, step: 1 },
-        { type: 'info', html: 'Drag the building to move it. Drag a corner handle to reshape it; double-click an edge to add a corner. Select a handle and press <kbd>Delete</kbd> to remove it. Automatic buildings keep clear of it.' },
+        ...(b.shape === 'circle' ? [{ type: 'range', key: 'r', label: 'Radius', min: 2, max: 300, step: 1, unit: ' m' }] : []),
+        { type: 'info', html: b.shape === 'circle' ? 'Drag the building to move it; drag the handle on its edge or use the slider to change the radius. Automatic buildings keep clear of it.' : 'Drag the building to move it. Drag a corner handle to reshape it; double-click an edge to add a corner. Select a handle and press <kbd>Delete</kbd> to remove it. Automatic buildings keep clear of it.' },
         { type: 'buttons', buttons: [{ label: 'Delete building', cls: 'danger', onClick: () => this.deleteSelection() }] },
       ], b, set);
     } else if (sel.kind === 'label') {
@@ -635,7 +636,8 @@ class App {
     }
     if (sel?.kind === 'building') {
       const b = this.doc.buildings.find((x) => x.id === sel.id);
-      if (b) for (let i = 0; i < b.pts.length; i++) { const s = worldToScreen(this.view, b.pts[i].x, b.pts[i].y); if (dist2(s.x, s.y, p.sx, p.sy) < 10 * 10) { this.draft = { kind: 'dragCorner', index: i, before: this.featureSnapshot() }; sel.handle = { kind: 'corner', index: i }; this.dirty = true; return; } }
+      if (b && b.shape === 'circle') { const s = worldToScreen(this.view, b.cx + b.r, b.cy); if (dist2(s.x, s.y, p.sx, p.sy) < 10 * 10) { this.draft = { kind: 'dragRadius', before: this.featureSnapshot() }; sel.handle = { kind: 'radius' }; this.dirty = true; return; } }
+      else if (b) for (let i = 0; i < b.pts.length; i++) { const s = worldToScreen(this.view, b.pts[i].x, b.pts[i].y); if (dist2(s.x, s.y, p.sx, p.sy) < 10 * 10) { this.draft = { kind: 'dragCorner', index: i, before: this.featureSnapshot() }; sel.handle = { kind: 'corner', index: i }; this.dirty = true; return; } }
       sel.handle = null;
     }
     const hit = this.hitTest(p.sx, p.sy);
@@ -653,7 +655,8 @@ class App {
     const p = this.pointer, d = this.draft;
     if (!p.down) { this.hover = this.hitTest(p.sx, p.sy); this.canvas.style.cursor = this.hover ? 'pointer' : 'default'; return; }
     if (d?.kind === 'dragFeature') { d.f.x = p.x + d.ox; d.f.y = p.y + d.oy; }
-    else if (d?.kind === 'dragBuilding') { const dx = p.x - d.lastX, dy = p.y - d.lastY; for (const q of d.b.pts) { q.x += dx; q.y += dy; } d.lastX = p.x; d.lastY = p.y; }
+    else if (d?.kind === 'dragBuilding') { const dx = p.x - d.lastX, dy = p.y - d.lastY; for (const q of d.b.pts) { q.x += dx; q.y += dy; } if (d.b.shape === 'circle') { d.b.cx += dx; d.b.cy += dy; } d.lastX = p.x; d.lastY = p.y; }
+    else if (d?.kind === 'dragRadius') { const b = this.doc.buildings.find((x) => x.id === this.selection.id); if (b) { b.r = Math.max(2, dist(p.x, p.y, b.cx, b.cy)); b.pts = this.circlePts(b.cx, b.cy, b.r); } }
     else if (d?.kind === 'dragCorner') { const b = this.doc.buildings.find((x) => x.id === this.selection.id); if (b) { b.pts[d.index].x = p.x; b.pts[d.index].y = p.y; } }
     else if (d?.kind === 'dragHandle') {
       const e = this.doc.roads.edges.get(this.selection.id);
@@ -669,9 +672,9 @@ class App {
       const f = d.f, from = { x: d.startX, y: d.startY }, to = { x: f.x, y: f.y };
       this.history.push({ label: 'Move', undo: () => { f.x = from.x; f.y = from.y; this.markChanged(); }, redo: () => { f.x = to.x; f.y = to.y; this.markChanged(); } });
       this.markChanged();
-    } else if ((d?.kind === 'dragHandle' || d?.kind === 'dragBuilding' || d?.kind === 'dragCorner') && p.moved) {
+    } else if ((d?.kind === 'dragHandle' || d?.kind === 'dragBuilding' || d?.kind === 'dragCorner' || d?.kind === 'dragRadius') && p.moved) {
       const after = this.featureSnapshot(), before = d.before, sel = this.selection;
-      this.history.push({ label: d.kind === 'dragHandle' ? 'Reshape road' : d.kind === 'dragBuilding' ? 'Move building' : 'Reshape building', undo: () => this.restoreFeatures(before), redo: () => this.restoreFeatures(after) });
+      this.history.push({ label: d.kind === 'dragHandle' ? 'Reshape road' : d.kind === 'dragBuilding' ? 'Move building' : d.kind === 'dragRadius' ? 'Resize building' : 'Reshape building', undo: () => this.restoreFeatures(before), redo: () => this.restoreFeatures(after) });
       this.selection = sel;
       this.invalidateBuildings(); this.markChanged();
     }
@@ -691,7 +694,7 @@ class App {
     const sel = this.selection, p = this.pointer;
     if (sel?.kind === 'building') {
       const b = this.doc.buildings.find((x) => x.id === sel.id);
-      if (!b) return;
+      if (!b || b.shape === 'circle') return;
       const ring = [...b.pts, b.pts[0]];
       const c = closestOnPolyline(p.x, p.y, ring);
       if (!c || c.d2 > (10 / this.view.scale) ** 2) return;
@@ -721,7 +724,7 @@ class App {
     } else if (sel.kind === 'building') {
       const b = this.doc.buildings.find((x) => x.id === sel.id);
       if (!b) return;
-      if (sel.handle?.kind === 'corner' && b.pts.length > 3) { this.withFeatureHistory('Delete corner', () => b.pts.splice(sel.handle.index, 1)); this.selection = { kind: 'building', id: sel.id }; this.renderSelectionPanel(); return; }
+      if (sel.handle?.kind === 'corner' && b.shape !== 'circle' && b.pts.length > 3) { this.withFeatureHistory('Delete corner', () => b.pts.splice(sel.handle.index, 1)); this.selection = { kind: 'building', id: sel.id }; this.renderSelectionPanel(); return; }
       this.withFeatureHistory('Delete building', () => { this.doc.buildings = this.doc.buildings.filter((x) => x.id !== sel.id); }); this.select(null);
     } else if (sel.kind === 'place') { this.withFeatureHistory('Delete place', () => { this.doc.places = this.doc.places.filter((x) => x.id !== sel.id); }); this.select(null); }
     else if (sel.kind === 'label') { this.withFeatureHistory('Delete label', () => { this.doc.labels = this.doc.labels.filter((x) => x.id !== sel.id); }); this.select(null); }
@@ -733,7 +736,7 @@ class App {
       const b = this.doc.buildings.find((x) => x.id === sel.id);
       if (!b) return;
       const off = 30 / this.view.scale;
-      const copy = { ...b, id: uid('b'), pts: b.pts.map((q) => ({ x: q.x + off, y: q.y + off })) };
+      const copy = { ...b, id: uid('b'), pts: b.pts.map((q) => ({ x: q.x + off, y: q.y + off })), ...(b.shape === 'circle' ? { cx: b.cx + off, cy: b.cy + off } : {}) };
       this.withFeatureHistory('Duplicate', () => this.doc.buildings.push(copy));
       this.select({ kind: 'building', id: copy.id });
       return;
@@ -771,6 +774,7 @@ class App {
       } else { this.draft = { kind: 'bPoly', pts: [{ x: p.x, y: p.y }], hint: 'Click to add corners. Click the first corner, double-click or press Enter to close. Esc cancels.' }; this.updateHint(); }
       return;
     }
+    if (ts.mode === 'circle') { this.draft = { kind: 'bCircle', cx: p.x, cy: p.y }; return; }
     const dir = ts.align ? this.nearestRoadDir(p.x, p.y, 150) : null;
     this.draft = { kind: 'bRect', start: { x: p.x, y: p.y }, u: dir || { x: 1, y: 0 } };
   }
@@ -785,8 +789,21 @@ class App {
     const P = (s, t) => ({ x: d.start.x + u.x * s + v.x * t, y: d.start.y + u.y * s + v.y * t });
     return [P(0, 0), P(a, 0), P(a, b), P(0, b)];
   }
+  circlePts(cx, cy, r) {
+    const n = Math.max(16, Math.min(72, Math.round(r * 1.5)));
+    const pts = [];
+    for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; pts.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r }); }
+    return pts;
+  }
   up_building() {
     const d = this.draft, p = this.pointer;
+    if (d?.kind === 'bCircle') {
+      this.draft = null;
+      const r = dist(p.x, p.y, d.cx, d.cy);
+      if (!p.moved || r < 2) return;
+      this.commitBuilding(this.circlePts(d.cx, d.cy, r), { shape: 'circle', cx: d.cx, cy: d.cy, r });
+      return;
+    }
     if (d?.kind !== 'bRect') return;
     this.draft = null;
     if (!p.moved) return;
@@ -800,10 +817,10 @@ class App {
     if (d?.kind === 'bPoly' && d.pts.length >= 3 && Math.abs(polygonArea(d.pts)) >= 4) this.commitBuilding(d.pts);
     this.dirty = true;
   }
-  commitBuilding(pts) {
+  commitBuilding(pts, extra = {}) {
     const ts = this.ts.building;
     if (polygonArea(pts) < 0) pts = pts.slice().reverse();
-    const b = { id: uid('b'), pts: pts.map((q) => ({ x: q.x, y: q.y })), h: ts.levels || 1, name: ts.name || '', manual: true };
+    const b = { id: uid('b'), pts: pts.map((q) => ({ x: q.x, y: q.y })), h: ts.levels || 1, name: ts.name || '', manual: true, ...extra };
     this.withFeatureHistory('Add building', () => this.doc.buildings.push(b));
     this.select({ kind: 'building', id: b.id, fresh: false });
   }
@@ -1107,12 +1124,14 @@ class App {
       const b = this.doc.buildings.find((x) => x.id === sel.id);
       if (b) {
         painter.strokePolys([b.pts], { color: acc, width: 0, px: 2, closed: true, alpha: 0.9 });
-        b.pts.forEach((q, i) => { const active = sel.handle?.kind === 'corner' && sel.handle.index === i; painter.circle(q.x, q.y, active ? 6 : 4.5, { fill: active ? acc : '#fff', stroke: acc, px: 2 }); });
+        if (b.shape === 'circle') { painter.circle(b.cx, b.cy, 3, { fill: acc }); painter.circle(b.cx + b.r, b.cy, sel.handle?.kind === 'radius' ? 6 : 4.5, { fill: sel.handle?.kind === 'radius' ? acc : '#fff', stroke: acc, px: 2 }); }
+        else b.pts.forEach((q, i) => { const active = sel.handle?.kind === 'corner' && sel.handle.index === i; painter.circle(q.x, q.y, active ? 6 : 4.5, { fill: active ? acc : '#fff', stroke: acc, px: 2 }); });
       }
     }
     if (this.tool === 'building' && d) {
       let pts = null;
       if (d.kind === 'bRect' && p.down) pts = this.rectCorners(d);
+      if (d.kind === 'bCircle' && p.down) { const r = dist(p.x, p.y, d.cx, d.cy); if (r >= 2) pts = this.circlePts(d.cx, d.cy, r); }
       if (d.kind === 'bPoly') pts = d.cursor ? [...d.pts, d.cursor] : d.pts;
       if (pts && pts.length >= 2) {
         painter.fillPolys([pts], acc, { alpha: 0.18 });
