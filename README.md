@@ -59,7 +59,7 @@ A hosted copy runs at https://odoluca.github.io/atlas-studio/.
 
 ## Releasing
 
-Bump the version in `src/version.js`, `version.json` and `package.json` together (a test checks they match) before pushing a user-visible change. The app compares its version with `version.json` on the server and offers a reload when a newer build is live, which avoids stale cached scripts on GitHub Pages.
+Run `python scripts/bump.py X.Y.Z` before pushing a user-visible change. It sets the version in `src/version.js`, `version.json` and `package.json` (a test checks they match) and stamps every module import with `?v=X.Y.Z`, so browsers fetch a fresh, consistent set of files for each release instead of mixing cached ones. The app compares its version with `version.json` on the server and offers a reload when a newer build is live, which avoids stale cached scripts on GitHub Pages.
 
 ## Development
 

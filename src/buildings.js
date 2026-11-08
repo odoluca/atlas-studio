@@ -1,7 +1,7 @@
 // Automatic building footprints along zoned roads, road- and water-aware.
-import { ROAD_TYPES, roadGeometry } from './roads.js';
-import { MAT } from './terrain.js';
-import { polylineLength, pointAlong, mulberry32, strHash, SpatialHash, convexOverlap, polygonsIntersect, closestOnSegment, segmentIntersection, pointInPolygon, bbox } from './geom.js';
+import { ROAD_TYPES, roadGeometry } from './roads.js?v=2.1.0';
+import { MAT } from './terrain.js?v=2.1.0';
+import { polylineLength, pointAlong, mulberry32, strHash, SpatialHash, convexOverlap, polygonsIntersect, closestOnSegment, segmentIntersection, pointInPolygon, bbox } from './geom.js?v=2.1.0';
 
 export const BUILDING_STYLES = {
   rows:     { label: 'Terraced rows', lotW: [10, 16], depth: [12, 20], gap: [0, 0], setback: 4, jitter: 0 },

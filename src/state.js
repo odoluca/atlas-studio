@@ -1,6 +1,6 @@
 // Document model, serialization, and undo history.
-import { Terrain } from './terrain.js';
-import { RoadGraph } from './roads.js';
+import { Terrain } from './terrain.js?v=2.1.0';
+import { RoadGraph } from './roads.js?v=2.1.0';
 
 export const FORMAT_VERSION = 2;
 

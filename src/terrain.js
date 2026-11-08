@@ -1,5 +1,5 @@
 // Tiled infinite heightfield + material field, brushes, and marching squares.
-import { smoothstep, chaikin } from './geom.js';
+import { smoothstep, chaikin } from './geom.js?v=2.1.0';
 
 export const TILE = 64;          // cells per tile side
 export const CELL = 4;           // meters per cell

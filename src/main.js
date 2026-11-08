@@ -1,15 +1,15 @@
 // Atlas Studio editor: view, tools, panels, history, autosave, export.
-import { newDoc, serialize, deserialize, History } from './state.js';
-import { MAT } from './terrain.js';
-import { ROAD_TYPES, RoadGraph, gridLines } from './roads.js';
-import { generateBuildings, BUILDING_STYLES } from './buildings.js';
-import { STYLES, PLACE_OPTIONS, LABEL_KINDS } from './styles.js';
-import { CanvasPainter, SvgPainter, renderTerrain, renderRoads, renderBuildings, renderRoadLabels, renderPlaces, renderLabels, renderScene, renderCompass, worldToScreen, screenToWorld, viewBounds, roadGeometry } from './render.js';
-import { saveAutosave, loadAutosave, download, pickFile, prefs } from './storage.js';
-import { makeExample } from './sample.js';
-import { toGeoJSON, toOSM, toAsciiGrid } from './exporters.js';
-import { APP_VERSION } from './version.js';
-import { dist, dist2, closestOnPolyline, uid, simplify, clamp, pointInPolygon, polygonArea } from './geom.js';
+import { newDoc, serialize, deserialize, History } from './state.js?v=2.1.0';
+import { MAT } from './terrain.js?v=2.1.0';
+import { ROAD_TYPES, RoadGraph, gridLines } from './roads.js?v=2.1.0';
+import { generateBuildings, BUILDING_STYLES } from './buildings.js?v=2.1.0';
+import { STYLES, PLACE_OPTIONS, LABEL_KINDS } from './styles.js?v=2.1.0';
+import { CanvasPainter, SvgPainter, renderTerrain, renderRoads, renderBuildings, renderRoadLabels, renderPlaces, renderLabels, renderScene, renderCompass, worldToScreen, screenToWorld, viewBounds, roadGeometry } from './render.js?v=2.1.0';
+import { saveAutosave, loadAutosave, download, pickFile, prefs } from './storage.js?v=2.1.0';
+import { makeExample } from './sample.js?v=2.1.0';
+import { toGeoJSON, toOSM, toAsciiGrid } from './exporters.js?v=2.1.0';
+import { APP_VERSION } from './version.js?v=2.1.0';
+import { dist, dist2, closestOnPolyline, uid, simplify, clamp, pointInPolygon, polygonArea } from './geom.js?v=2.1.0';
 
 const $ = (id) => document.getElementById(id);
 
