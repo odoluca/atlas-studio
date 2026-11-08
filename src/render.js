@@ -289,10 +289,19 @@ export function renderTerrain(painter, doc, region, scale, opts = {}) {
 
   // Water (painted or below sea level)
   const water = maskOutlines(step, x0, y0, step, nx, ny, (i) => m[i] === MAT.WATER || h[i] < sea);
-  if (water.lines.length) {
-    painter.fillPolys(water.lines, S.water);
-    painter.strokePolys(water.lines, { color: S.waterEdge, width: 0, minPx: 1.2, closed: true, alpha: 0.9 });
+  // Water channels (river-type roads) belong to the same body of water: outlines of both first, then fills of both,
+  // so a channel merges seamlessly where it meets a lake or the sea.
+  const channels = new Map(); // width -> polylines
+  if (doc.roads) for (const e of doc.roads.edges.values()) {
+    if (!ROAD_TYPES[e.type]?.water) continue;
+    const w = doc.roads.width(e);
+    if (!channels.has(w)) channels.set(w, []);
+    channels.get(w).push(roadGeometry(doc.roads, e));
   }
+  if (water.lines.length) painter.strokePolys(water.lines, { color: S.waterEdge, width: 0, minPx: 2, closed: true, alpha: 0.9 });
+  for (const [w, polys] of channels) painter.strokePolys(polys, { color: S.waterEdge, width: w + 2 / scale, minPx: 2, alpha: 0.9 });
+  if (water.lines.length) painter.fillPolys(water.lines, S.water);
+  for (const [w, polys] of channels) painter.strokePolys(polys, { color: S.water, width: w, minPx: 1 });
 
   // Contours
   if (doc.settings.showContours) {
@@ -342,6 +351,7 @@ export function renderRoads(painter, doc, scale, bounds) {
   const g = doc.roads;
   const byType = new Map();
   for (const e of g.edges.values()) {
+    if (ROAD_TYPES[e.type]?.water) continue; // drawn with the terrain water layer
     const pts = roadGeometry(g, e);
     let vis = !bounds;
     if (bounds) for (const p of pts) if (p.x >= bounds.minX - 50 && p.x <= bounds.maxX + 50 && p.y >= bounds.minY - 50 && p.y <= bounds.maxY + 50) { vis = true; break; }

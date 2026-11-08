@@ -1092,10 +1092,16 @@ class App {
   }
 
   // ---------- Rendering ----------
+  /** Signature of water channels so the terrain layer re-renders when they change. */
+  channelKey() {
+    let k = '';
+    for (const e of this.doc.roads.edges.values()) if (ROAD_TYPES[e.type]?.water) { k += e.id + ':' + this.doc.roads.width(e) + ':' + this.doc.roads.edgePoints(e).map((p) => `${Math.round(p.x)},${Math.round(p.y)}`).join(';') + '|'; }
+    return k;
+  }
   invalidateTerrain(interactive = false) { if (this.terrainCache) this.terrainCache.stale = true; this.terrainInteractive = interactive; this.dirty = true; }
   ensureTerrainCache() {
     const v = this.view, T = this.doc.terrain, s = this.doc.settings;
-    const settingsKey = `${s.style}|${s.showContours}|${s.contourInterval}|${s.contourLabels}|${s.showHillshade}|${s.exaggeration}|${s.showTrees}|${T.seaLevel}`;
+    const settingsKey = `${s.style}|${s.showContours}|${s.contourInterval}|${s.contourLabels}|${s.showHillshade}|${s.exaggeration}|${s.showTrees}|${T.seaLevel}|${this.channelKey()}`;
     const c = this.terrainCache;
     const margin = 0.35;
     const cw = Math.ceil(v.w * (1 + 2 * margin)), ch = Math.ceil(v.h * (1 + 2 * margin));
