@@ -50,10 +50,10 @@ h3.sec:first-child { margin-top: 0; }
 .field input[type=range] { width: 100%; accent-color: var(--accent); }
 .field.check label { cursor: pointer; justify-content: flex-start; gap: 8px; }
 .field.check input { accent-color: var(--accent); width: 15px; height: 15px; margin: 0; }
-.seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-.seg button { flex: 1; border: 0; background: #fff; padding: 6px 4px; cursor: pointer; font-size: 12px; }
-.seg button + button { border-left: 1px solid var(--line); }
-.seg button.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.seg button { flex: 1 1 calc(33.333% - 4px); min-width: 0; border: 1px solid var(--line); border-radius: 7px; background: #fff; padding: 6px 4px; cursor: pointer; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.seg button:hover { background: var(--bg); }
+.seg button.active { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); font-weight: 600; }
 .swatches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .swatch { border: 2px solid var(--line); border-radius: 8px; padding: 6px 4px; cursor: pointer; font-size: 11px; text-align: center; background: #fff; }
 .swatch i { display: block; height: 16px; border-radius: 4px; margin-bottom: 4px; border: 1px solid rgba(0,0,0,.08); }

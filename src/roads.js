@@ -7,7 +7,7 @@ export const ROAD_TYPES = {
   avenue:  { label: 'Avenue',   width: 14, rank: 2, zoned: true },
   highway: { label: 'Highway',  width: 22, rank: 3, zoned: false },
   rail:    { label: 'Railway',  width: 4,  rank: 1, zoned: false },
-  river:   { label: 'Water channel', width: 12, rank: -2, zoned: false, water: true },
+  river:   { label: 'Channel', width: 12, rank: -2, zoned: false, water: true },
 };
 
 /** Rendered geometry of an edge: intermediate points are smoothed into curves. */
